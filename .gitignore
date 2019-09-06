@@ -1,0 +1,16 @@
+ftc_app-master.zip
+ftc_app-master/.github/
+ftc_app-master/FtcRobotController/
+ftc_app-master/README.md
+ftc_app-master/TeamCode/build.gradle
+ftc_app-master/TeamCode/build.release.gradle
+ftc_app-master/TeamCode/src/main/AndroidManifest.xml
+ftc_app-master/TeamCode/src/main/res/
+ftc_app-master/build.common.gradle
+ftc_app-master/build.gradle
+ftc_app-master/doc/
+ftc_app-master/gradle/
+ftc_app-master/gradlew
+ftc_app-master/gradlew.bat
+ftc_app-master/libs/
+ftc_app-master/settings.gradle
