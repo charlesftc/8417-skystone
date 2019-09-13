@@ -67,4 +67,16 @@ public class Odometry {
         prevH = ticks;
         return delta * inchesPerTick; //translates distance from encoder ticks to inches
     }
+
+    public double getDistanceL() {
+        return left.getCurrentPosition() * inchesPerTick;
+    }
+
+    public double getDistanceR() {
+        return right.getCurrentPosition() * inchesPerTick;
+    }
+
+    public double getDistanceH() {
+        return horizontal.getCurrentPosition() * inchesPerTick;
+    }
 }
