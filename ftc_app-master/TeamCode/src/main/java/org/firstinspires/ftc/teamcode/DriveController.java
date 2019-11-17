@@ -16,20 +16,18 @@ public class DriveController {
     private DcMotor leftRear;
     private DcMotor rightRear;
 
-    private double setpointKP = 0.5; //was 0.5
+    private double dSetpointKP = 0.5;
+    private double sSetpointKP = 0.7;
     private double tSetpointKP = 0.5;
-    private double kP = 0.16;//was 0.1
-    private double thetaKP = 0.003;
+    private double driveKP = 0.16; //was 0.1
+    private double thetaKP = 0.005;
     private double xErrorSum = 0;
     private double yErrorSum = 0;
     private double tErrorSum = 0;
     private double maxErrorSum = 0.05;
-    private double maxTErrorSum = 0.005;
-    private double kI = 0.0004;
-    private double thetaKI = 0.000005;
-
-    private double velThreshold = 0.3;
-    private double turnVelThreshold = 0.3;
+    private double maxTErrorSum = 0.03;
+    private double kI = 0.000015;
+    private double thetaKI = 0.0005;
 
     /*private double maxVel = 54; //changelater
     private double brakingDist = 8; //changelater
@@ -98,8 +96,8 @@ public class DriveController {
         yErrorSum = Range.clip(yErrorSum, -maxErrorSum, maxErrorSum);
         tErrorSum = Range.clip(tErrorSum, -maxTErrorSum, maxTErrorSum);
 
-        double processorXVel = (xVelSP * setpointKP) + (errorXVel * kP) + (xErrorSum * kI);
-        double processorYVel = (yVelSP * setpointKP) + (errorYVel * kP) + (yErrorSum * kI);
+        double processorXVel = (xVelSP * sSetpointKP) + (errorXVel * driveKP) + (xErrorSum * kI);
+        double processorYVel = (yVelSP * dSetpointKP) + (errorYVel * driveKP) + (yErrorSum * kI);
         double processorTVel = (tVelSP * tSetpointKP) + (errorTVel * thetaKP) + (tErrorSum * thetaKI);
         /*opmode.telemetry.addData("Control: ", "yVelSP: %.3f, curYVel: %.3f," +
             "errorYVel: %.3f, yErrorSum: %.3f, processorYVel: %.3f", yVelSP, posAndVel[4],

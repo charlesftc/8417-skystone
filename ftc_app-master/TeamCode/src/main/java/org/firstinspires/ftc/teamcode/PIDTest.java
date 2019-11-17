@@ -21,7 +21,6 @@ public class PIDTest extends LinearOpMode {
     private DcMotor leftOdom;
     private DcMotor rightOdom;
     private DcMotor horizontalOdom;
-
     @Override
     public void runOpMode() {
         leftFront = hardwareMap.get(DcMotor.class, "left_front");
@@ -47,7 +46,7 @@ public class PIDTest extends LinearOpMode {
         leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        odometryThread = new OdometryThread(leftOdom, rightOdom, horizontalOdom);
+        odometryThread = new OdometryThread(this, leftOdom, rightOdom, horizontalOdom);
         driveController = new DriveController(this, leftFront, rightFront, leftRear, rightRear, odometryThread);
         /*telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override

@@ -1,14 +1,25 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
+
 public class Odometry {
+    private LinearOpMode opmode;
     private DcMotor left; //DcMotors are used for access to their corresponding encoder ports
     private DcMotor right;
     private DcMotor horizontal;
-    private double inchesPerTick;
+    private double inchesPerTickL;
+    private double inchesPerTickR;
+    private double inchesPerTickH;
     private double width; //distance in inches between the left and right odometry wheels
     private double verticalDistance; //the vertical (y only) distance from the center of the robot
                                      //to the horizontal odometry wheel
@@ -21,18 +32,29 @@ public class Odometry {
     private ElapsedTime runtime = new ElapsedTime();
     private double prevTime = 0;
 
-    public Odometry (DcMotor l, DcMotor r, DcMotor h, int ticksPerRev, double radius,
+    private double prevHeading;
+    private double angleOffset;
+
+    BNO055IMU imu;
+
+    public Odometry (LinearOpMode op, DcMotor l, DcMotor r, DcMotor h, int ticksPerRev, double radius, double balance,
                         double width, double verticalDistance, double x, double y, double theta,
                         double xVel, double yVel, double tVel, double maxVel, double maxTurnVel) {
+        opmode = op;
         left = l;
         right = r;
         horizontal = h;
-        inchesPerTick = 1 / (ticksPerRev / (2 * Math.PI * radius));
+        inchesPerTickL = 1 / (ticksPerRev / (2 * Math.PI * (radius - balance)));
+        inchesPerTickR = 1 / (ticksPerRev / (2 * Math.PI * (radius + balance)));
+        inchesPerTickH = 1 / (ticksPerRev / (2 * Math.PI * radius));
         this.width = width;
         this.verticalDistance = verticalDistance;
-        posAndVel = new double[] {x, y, theta, xVel, yVel, tVel};
+        prevHeading = theta;
+        angleOffset = theta;
+        posAndVel = new double[] {x, y, prevHeading, xVel, yVel, tVel};
         this.maxVel = maxVel;
         this.maxTurnVel = maxTurnVel;
+        initImu();
     }
 
     public double[] getPosAndVel() {
@@ -44,7 +66,16 @@ public class Odometry {
         double deltaH = getDeltaH();
         //the distance travled forward/back = the average of the left and right deltas
         double deltaStraight = (deltaL + deltaR) / 2;
-        double deltaHeading = (deltaR - deltaL) / width;
+        //double deltaHeading = (deltaR - deltaL) / width;
+        double curHeading = getHeading();
+        double deltaHeading = curHeading - prevHeading;
+        prevHeading = curHeading;
+        if (deltaHeading < -Math.PI) {
+            deltaHeading += Math.PI * 2;
+        }
+        if (deltaHeading > Math.PI) {
+            deltaHeading -= Math.PI * 2;
+        }
         //the predicted side delta that would occur if the robot simply turned on its center
         //the measured amount
         double predictedDeltaSide = deltaHeading * verticalDistance;
@@ -73,32 +104,53 @@ public class Odometry {
         int ticks = -left.getCurrentPosition();
         int delta = ticks - prevL;
         prevL = ticks;
-        return delta * inchesPerTick; //translates distance from encoder ticks to inches
+        return delta * inchesPerTickL; //translates distance from encoder ticks to inches
     }
 
     private double getDeltaR() {
         int ticks = right.getCurrentPosition();
         int delta = ticks - prevR;
         prevR = ticks;
-        return delta * inchesPerTick; //translates distance from encoder ticks to inches
+        return delta * inchesPerTickR; //translates distance from encoder ticks to inches
     }
 
     private double getDeltaH() {
         int ticks = horizontal.getCurrentPosition();
         int delta = ticks - prevH;
         prevH = ticks;
-        return delta * inchesPerTick; //translates distance from encoder ticks to inches
+        return delta * inchesPerTickH; //translates distance from encoder ticks to inches
     }
 
     public double getDistanceL() {
-        return left.getCurrentPosition() * inchesPerTick;
+        return left.getCurrentPosition() * inchesPerTickL;
     }
 
     public double getDistanceR() {
-        return right.getCurrentPosition() * inchesPerTick;
+        return right.getCurrentPosition() * inchesPerTickR;
     }
 
     public double getDistanceH() {
-        return horizontal.getCurrentPosition() * inchesPerTick;
+        return horizontal.getCurrentPosition() * inchesPerTickH;
+    }
+
+    public double getHeading(){
+        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS);
+        return angles.firstAngle + angleOffset;
+    }
+
+    private void initImu() {
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
+        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.loggingEnabled = true;
+        parameters.loggingTag = "imu";
+        //parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+        imu = opmode.hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+
+        while (!opmode.isStopRequested() && !imu.isGyroCalibrated()) {
+            opmode.sleep(50);
+            opmode.idle();
+        }
     }
 }
