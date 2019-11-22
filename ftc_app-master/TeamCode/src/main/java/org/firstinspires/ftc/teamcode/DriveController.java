@@ -16,18 +16,18 @@ public class DriveController {
     private DcMotor leftRear;
     private DcMotor rightRear;
 
-    private double dSetpointKP = 0.5;
-    private double sSetpointKP = 0.7;
-    private double tSetpointKP = 0.5;
+    private double dSetpointKP = 0.4;
+    private double sSetpointKP = 0.9;
+    private double tSetpointKP = 0.4;
     private double driveKP = 0.16; //was 0.1
     private double thetaKP = 0.005;
     private double xErrorSum = 0;
     private double yErrorSum = 0;
     private double tErrorSum = 0;
-    private double maxErrorSum = 0.05;
-    private double maxTErrorSum = 0.03;
-    private double kI = 0.000015;
-    private double thetaKI = 0.0005;
+    private double maxErrorSum = 0.25;
+    private double maxTErrorSum = 0.2;
+    private double kI = 0.0; //0.015
+    private double thetaKI = 0.0; //0.008
 
     /*private double maxVel = 54; //changelater
     private double brakingDist = 8; //changelater
@@ -53,33 +53,11 @@ public class DriveController {
         setPrevTime();
         posAndVel = odometryThread.getPosAndVel();
 
-        /*if (Math.abs(xVelSP) < 1) {
-            if (Math.abs(posAndVel[4]) > velThreshold) {
-                xVelSP = 0;
-            } else {
-                //xVelSP *= 0.4;
-            }
-        }
-
-        if (Math.abs(yVelSP) < 1) {
-            if (Math.abs(posAndVel[5]) > velThreshold) {
-                yVelSP = 0;
-            } else {
-                //yVelSP *= 0.4;
-            }
-        }
-
-        if (Math.abs(tVelSP) < 1 && Math.abs(posAndVel[5]) > turnVelThreshold) {
-            tVelSP = 0;
-        } else {
-            tVelSP *= 0.3;
-        }*/
-
         double errorXVel = xVelSP - posAndVel[3];
         double errorYVel = yVelSP - posAndVel[4];
         double errorTVel = tVelSP - posAndVel[5];
 
-        if (xVelSP == 0 && posAndVel[3] == 0) {
+        /*if (xVelSP == 0 && posAndVel[3] == 0) {
             xErrorSum = 0;
         }
         if (yVelSP == 0 && posAndVel[4] == 0) {
@@ -87,23 +65,23 @@ public class DriveController {
         }
         if (tVelSP == 0 && posAndVel[5] == 0) {
             tErrorSum = 0;
-        }
+        }*/
 
-        xErrorSum += errorXVel * elapsedTime;
-        yErrorSum += errorYVel * elapsedTime;
-        tErrorSum += errorTVel * elapsedTime;
+        xErrorSum += errorXVel * elapsedTime * kI;
+        yErrorSum += errorYVel * elapsedTime * kI;
+        tErrorSum += errorTVel * elapsedTime * thetaKI;
         xErrorSum = Range.clip(xErrorSum, -maxErrorSum, maxErrorSum);
         yErrorSum = Range.clip(yErrorSum, -maxErrorSum, maxErrorSum);
         tErrorSum = Range.clip(tErrorSum, -maxTErrorSum, maxTErrorSum);
 
-        double processorXVel = (xVelSP * sSetpointKP) + (errorXVel * driveKP) + (xErrorSum * kI);
-        double processorYVel = (yVelSP * dSetpointKP) + (errorYVel * driveKP) + (yErrorSum * kI);
-        double processorTVel = (tVelSP * tSetpointKP) + (errorTVel * thetaKP) + (tErrorSum * thetaKI);
+        double processXVel = (xVelSP * sSetpointKP) + (errorXVel * driveKP) + xErrorSum;
+        double processYVel = (yVelSP * dSetpointKP) + (errorYVel * driveKP) + yErrorSum;
+        double processTVel = (tVelSP * tSetpointKP) + (errorTVel * thetaKP) + tErrorSum;
         /*opmode.telemetry.addData("Control: ", "yVelSP: %.3f, curYVel: %.3f," +
-            "errorYVel: %.3f, yErrorSum: %.3f, processorYVel: %.3f", yVelSP, posAndVel[4],
-            errorYVel, yErrorSum, processorYVel);
+            "errorYVel: %.3f, yErrorSum: %.3f, processYVel: %.3f", yVelSP, posAndVel[4],
+            errorYVel, yErrorSum, processYVel);
         opmode.telemetry.update();*/
-        powerMotors(processorXVel, processorYVel, processorTVel);
+        powerMotors(processXVel, processYVel, processTVel);
     }
 
     public void powerMotors(double strafeVel, double driveVel, double turnVel) {
@@ -114,14 +92,14 @@ public class DriveController {
         double rightFrontVel = -driveVel + strafeVel - turnVel;
         double leftRearVel = -driveVel + strafeVel + turnVel;
         double rightRearVel = -driveVel - strafeVel - turnVel;
-
-        double[] powers = {leftFrontVel, rightFrontVel, leftRearVel, rightRearVel};
-        Arrays.sort(powers);
-        if (powers[3] > 1) {
-            leftFrontVel /= powers[3];
-            rightFrontVel /= powers[3];
-            leftRearVel /= powers[3];
-            rightRearVel /= powers[3];
+        double[] vels = {leftFrontVel, rightFrontVel, leftRearVel, rightRearVel};
+        //double[] vels = {Math.abs(leftFrontVel), Math.abs(rightFrontVel), Math.abs(leftRearVel), Math.abs(rightRearVel)};
+        Arrays.sort(vels);
+        if (vels[3] > 1) {
+            leftFrontVel /= vels[3];
+            rightFrontVel /= vels[3];
+            leftRearVel /= vels[3];
+            rightRearVel /= vels[3];
         }
         leftFront.setPower(leftFrontVel);
         rightFront.setPower(rightFrontVel);
@@ -130,43 +108,10 @@ public class DriveController {
     }
 
     public void setCurTime() {
-        curTime = runtime.milliseconds();
+        curTime = runtime.seconds();
     }
 
     public void setPrevTime() {
         prevTime = curTime;
     }
-
-    //scaling things:
-    /*double xPow;
-    double yPow;
-    double tPow;
-    if (!(Math.abs(errorXVel) >= 1)) {
-        double xSign = Math.copySign(1.0, errorXVel);
-        xPow = Math.sqrt(1 - (Math.abs(errorXVel) - 0.2)) * xSign;
-    } else {
-        xPow = errorXVel;
-    }
-    if (!(Math.abs(errorYVel) >= 1)) {
-        double ySign = Math.copySign(1.0, errorYVel);
-        yPow = Math.sqrt(1 - (Math.abs(errorYVel) - 0.2)) * ySign;
-    } else {
-        yPow = errorYVel;
-    }
-    if (!(Math.abs(errorThetaVel) >= 1)) {
-        double tSign = Math.copySign(1.0, errorThetaVel);
-        tPow = Math.sqrt(1 - (Math.abs(errorThetaVel) - 0.2)) * tSign;
-    } else {
-        tPow = errorThetaVel;
-    }*/
-
-    /*errorXVel = xVel - posAndVel[3];
-    double xSign = Math.copySign(1.0, errorXVel);
-    errorXVel = Math.pow(errorXVel, (1.0 / 6.0)) * xSign;
-    errorYVel = yVel - posAndVel[4];
-    double ySign = Math.copySign(1.0, errorYVel);
-    errorYVel = Math.pow(errorYVel, (1.0 / 6.0)) * ySign;
-    errorThetaVel = tVel - posAndVel[5];
-    double tSign = Math.copySign(1.0, errorThetaVel);
-    errorThetaVel = Math.pow(errorThetaVel, (1.0 / 6.0)) * tSign;*/
 }

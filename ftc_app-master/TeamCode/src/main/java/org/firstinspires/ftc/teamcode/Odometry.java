@@ -10,7 +10,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 
 public class Odometry {
     private LinearOpMode opmode;
@@ -78,20 +77,21 @@ public class Odometry {
         }
         //the predicted side delta that would occur if the robot simply turned on its center
         //the measured amount
-        double predictedDeltaSide = deltaHeading * verticalDistance;
+        double predictedDeltaSide = deltaHeading * -verticalDistance;
         //the distance traveled sideways = the actual side delta - the portion of that which is
         //accounted for by the measured rotation
         double deltaSide = deltaH - predictedDeltaSide;
         //sin and cos of theta are used to translate the straight and sideways deltas into world
         //coordinates
-        double dX = (deltaStraight * Math.cos(posAndVel[2]) + (deltaSide * Math.sin(posAndVel[2])));
-        double dY = (deltaStraight * Math.sin(posAndVel[2]) + (deltaSide * Math.cos(posAndVel[2])));
+        double thetaOffset = posAndVel[2] - (Math.PI / 2);
+        double dX = (deltaSide * Math.cos(thetaOffset) - (deltaStraight * Math.sin(thetaOffset)));
+        double dY = (deltaSide * Math.sin(thetaOffset) + (deltaStraight * Math.cos(thetaOffset)));
         posAndVel[0] += dX;
         posAndVel[1] += dY;
         posAndVel[2] += deltaHeading;
         if (elapsedTime > 0) {
-            double xVel = (dX / elapsedTime) * 1000;
-            double yVel = (dY / elapsedTime) * 1000;
+            double xVel = (deltaSide / elapsedTime) * 1000;
+            double yVel = (deltaStraight / elapsedTime) * 1000;
             double tVel = (deltaHeading / elapsedTime) * 1000;
             posAndVel[3] = Range.scale(xVel, -maxVel, maxVel, -1, 1);
             posAndVel[4] = Range.scale(yVel, -maxVel, maxVel, -1, 1);

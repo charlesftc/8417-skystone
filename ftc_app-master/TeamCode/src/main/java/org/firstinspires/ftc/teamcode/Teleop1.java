@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -8,10 +7,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.Func;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -33,12 +28,16 @@ public class Teleop1 extends LinearOpMode {
     private DcMotor leftIntake;
     private DcMotor rightIntake;
 
+    private Servo leftHook;
+    private Servo rightHook;
+
     double driveSpeed = 1;
     double strafeSpeed = 2;
     double intakePow = 1;
-    double maxDispensePow = 1;
+    double maxDispensePow = 0.3;
 
-    //BNO055IMU imu;
+    private boolean prevA;
+    private boolean prevB;
 
     @Override
     public void runOpMode() {
@@ -74,6 +73,10 @@ public class Teleop1 extends LinearOpMode {
         leftIntakeLift.setDirection(Servo.Direction.REVERSE);
         //leftIntake.setDirection(DcMotorSimple.Direction.REVERSE);
 
+        leftHook = hardwareMap.get(Servo.class, "left_hook");
+        rightHook = hardwareMap.get(Servo.class, "right_hook");
+        rightHook.setDirection(Servo.Direction.REVERSE);
+
         leftIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -81,10 +84,8 @@ public class Teleop1 extends LinearOpMode {
         rightIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        //initImu();
-
-        odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
-        telemetry.addLine().addData("Pos: ", new Func<String>() {
+        //odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
+        /*telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "x: %.3f, y: %.3f, theta: %.3f, " +
@@ -92,25 +93,26 @@ public class Teleop1 extends LinearOpMode {
                         posAndVel[0], posAndVel[1], posAndVel[2] * (180 / Math.PI),
                         posAndVel[3], posAndVel[4], posAndVel[5]);
             }
-        });
-        /*telemetry.addLine().addData("Intake lifts: ", new Func<String>() {
+        });*/
+        telemetry.addLine().addData("Hooks: ", new Func<String>() {
             @Override
             public String value() {
-                return String.format(Locale.getDefault(), "left: %.3f, right: %.3f", leftIntakeLift.getPosition(), rightIntakeLift.getPosition());
+                return String.format(Locale.getDefault(), "left: %.3f, right: %.3f",
+                        leftHook.getPosition(), rightHook.getPosition());
             }
-        });*/
-        odometryThread.start();
+        });
+        //odometryThread.start();
         waitForStart();
         while (opModeIsActive()) {
             updateController1();
             updateController2();
             telemetry.update();
         }
-        odometryThread.end();
+        //odometryThread.end();
     }
 
     private void updateController1() {
-        posAndVel = odometryThread.getPosAndVel();
+        //posAndVel = odometryThread.getPosAndVel();
         if(gamepad1.left_bumper){
             driveSpeed = 0.3;
             strafeSpeed = 0.6;
@@ -125,7 +127,7 @@ public class Teleop1 extends LinearOpMode {
         double rightFrontPow = -drivePow + strafePow - turnPow;
         double leftRearPow = -drivePow + strafePow + turnPow;
         double rightRearPow = -drivePow - strafePow - turnPow;
-        double[] powers = {leftFrontPow, rightFrontPow, leftRearPow, rightRearPow};
+        double[] powers = {Math.abs(leftFrontPow), Math.abs(rightFrontPow), Math.abs(leftRearPow), Math.abs(rightRearPow)};
         Arrays.sort(powers);
         if (powers[3] > 1) {
             leftFrontPow /= powers[3];
@@ -140,16 +142,6 @@ public class Teleop1 extends LinearOpMode {
     }
 
     private void updateController2() {
-        /*
-        when (gamepad2. DCMotor pow > 1 {
-        dont extrude the block
-        }
-        else {
-
-        }
-
-        Double DCmotorPow = 1 = gamePad2. Left_trigger_pos
-         */
         if (gamepad1.right_bumper) {
             leftIntake.setPower(-intakePow);
             rightIntake.setPower(intakePow);
@@ -162,33 +154,29 @@ public class Teleop1 extends LinearOpMode {
         }
 
         if (gamepad1.right_trigger > 0.2) {
-            leftIntakeLift.setPosition(0.4);
-            rightIntakeLift.setPosition(0.4);
+            leftIntakeLift.setPosition(0.345); //0.4
+            rightIntakeLift.setPosition(0.345); //0.4
         } else {
             leftIntakeLift.setPosition(0.255);
             rightIntakeLift.setPosition(0.255);
         }
-    }
 
-   /* public double getHeading(){
-        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS);
-        return angles.firstAngle;
-    }
 
-    private void initImu() {
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
-        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.loggingEnabled = true;
-        parameters.loggingTag = "imu";
-        //parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-        imu.initialize(parameters);
+        boolean a = gamepad1.a;
+        boolean b = gamepad1.b;
 
-        while (!isStopRequested() && !imu.isGyroCalibrated()) {
-            sleep(50);
-            idle();
+        if (!a && prevA) {
+            leftHook.setPosition(0);
+            rightHook.setPosition(0);
+        } else if (!b && prevB) {
+            leftHook.setPosition(1);
+            rightHook.setPosition(1);
         }
-    }*/
 
+        prevA = a;
+        prevB = b;
+
+        /*leftHook.setPosition((-gamepad2.left_stick_y + 1) / 2);
+        rightHook.setPosition((-gamepad2.left_stick_y + 1) / 2);*/
+    }
 }

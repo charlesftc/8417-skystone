@@ -27,8 +27,8 @@ public class PIDTest extends LinearOpMode {
         rightFront = hardwareMap.get(DcMotor.class, "right_front");
         leftRear = hardwareMap.get(DcMotor.class, "left_rear");
         rightRear = hardwareMap.get(DcMotor.class, "right_rear");
-        leftOdom = hardwareMap.get(DcMotor.class, "left_odom");
-        rightOdom = hardwareMap.get(DcMotor.class, "right_odom");
+        leftOdom = hardwareMap.get(DcMotor.class, "left_intake");
+        rightOdom = hardwareMap.get(DcMotor.class, "right_intake");
         horizontalOdom = hardwareMap.get(DcMotor.class, "horizontal_odom");
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
