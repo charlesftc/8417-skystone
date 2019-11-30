@@ -13,14 +13,14 @@ import java.util.Locale;
 
 @TeleOp(name="Teleop1", group="Linear Opmode")
 public class Teleop1 extends LinearOpMode {
-    private OdometryThread odometryThread;
-    private double posAndVel[];
+    /*private OdometryThread odometryThread;
+    private double posAndVel[];*/
     private DcMotor leftFront;
     private DcMotor rightFront;
     private DcMotor leftRear;
     private DcMotor rightRear;
-    /*private DcMotor leftOdom;
-    private DcMotor rightOdom;*/
+    private DcMotor leftOdom;
+    private DcMotor rightOdom;
     private DcMotor horizontalOdom;
 
     private Servo leftIntakeLift;
@@ -45,8 +45,8 @@ public class Teleop1 extends LinearOpMode {
         rightFront = hardwareMap.get(DcMotor.class, "right_front");
         leftRear = hardwareMap.get(DcMotor.class, "left_rear");
         rightRear = hardwareMap.get(DcMotor.class, "right_rear");
-        /*leftOdom = hardwareMap.get(DcMotor.class, "left_intake");
-        rightOdom = hardwareMap.get(DcMotor.class, "right_intake");*/
+        leftOdom = hardwareMap.get(DcMotor.class, "left_intake");
+        rightOdom = hardwareMap.get(DcMotor.class, "right_intake");
         horizontalOdom = hardwareMap.get(DcMotor.class, "horizontal_odom");
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -71,7 +71,6 @@ public class Teleop1 extends LinearOpMode {
         leftIntake = hardwareMap.get(DcMotor.class, "left_intake");
         rightIntake = hardwareMap.get(DcMotor.class, "right_intake");
         leftIntakeLift.setDirection(Servo.Direction.REVERSE);
-        //leftIntake.setDirection(DcMotorSimple.Direction.REVERSE);
 
         leftHook = hardwareMap.get(Servo.class, "left_hook");
         rightHook = hardwareMap.get(Servo.class, "right_hook");
@@ -84,8 +83,8 @@ public class Teleop1 extends LinearOpMode {
         rightIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        //odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
-        /*telemetry.addLine().addData("Pos: ", new Func<String>() {
+        /*odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
+        telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "x: %.3f, y: %.3f, theta: %.3f, " +
@@ -94,13 +93,13 @@ public class Teleop1 extends LinearOpMode {
                         posAndVel[3], posAndVel[4], posAndVel[5]);
             }
         });*/
-        telemetry.addLine().addData("Hooks: ", new Func<String>() {
+        /*telemetry.addLine().addData("Hooks: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "left: %.3f, right: %.3f",
                         leftHook.getPosition(), rightHook.getPosition());
             }
-        });
+        });*/
         //odometryThread.start();
         waitForStart();
         while (opModeIsActive()) {
@@ -148,14 +147,20 @@ public class Teleop1 extends LinearOpMode {
         } else if (gamepad1.left_trigger > 0.05) {
             leftIntake.setPower(maxDispensePow * gamepad1.left_trigger);
             rightIntake.setPower(-maxDispensePow * gamepad1.left_trigger);
+        } else if (gamepad1.y) {
+            leftIntake.setPower(1);
+            rightIntake.setPower(-1);
+        } else if (gamepad1.x) {
+            leftIntake.setPower(0.3);
+            rightIntake.setPower(-0.3);
         } else {
             leftIntake.setPower(0);
             rightIntake.setPower(0);
         }
 
         if (gamepad1.right_trigger > 0.2) {
-            leftIntakeLift.setPosition(0.345); //0.4
-            rightIntakeLift.setPosition(0.345); //0.4
+            leftIntakeLift.setPosition(0.4); //0.4
+            rightIntakeLift.setPosition(0.4); //0.4
         } else {
             leftIntakeLift.setPosition(0.255);
             rightIntakeLift.setPosition(0.255);
@@ -175,8 +180,5 @@ public class Teleop1 extends LinearOpMode {
 
         prevA = a;
         prevB = b;
-
-        /*leftHook.setPosition((-gamepad2.left_stick_y + 1) / 2);
-        rightHook.setPosition((-gamepad2.left_stick_y + 1) / 2);*/
     }
 }

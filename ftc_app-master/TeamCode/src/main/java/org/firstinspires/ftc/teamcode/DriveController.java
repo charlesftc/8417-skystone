@@ -114,4 +114,11 @@ public class DriveController {
     public void setPrevTime() {
         prevTime = curTime;
     }
+
+    public void setMotorsMode(DcMotor.RunMode mode) {
+        leftFront.setMode(mode);
+        leftRear.setMode(mode);
+        rightFront.setMode(mode);
+        leftRear.setMode(mode);
+    }
 }

@@ -7,13 +7,10 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-import java.util.Locale;
-
-@Autonomous(name="AutoDrive", group="Linear")
-public class AutoDrive extends LinearOpMode {
+public class AutoDrive {
+    private LinearOpMode opmode;
     private OdometryThread odometryThread;
     private double posAndVel[];
     private DcMotor leftFront;
@@ -62,17 +59,15 @@ public class AutoDrive extends LinearOpMode {
     double yVel;
     double tVel;
 
-    //BNO055IMU imu;
-
-    @Override
-    public void runOpMode() {
-        leftFront = hardwareMap.get(DcMotor.class, "left_front");
-        rightFront = hardwareMap.get(DcMotor.class, "right_front");
-        leftRear = hardwareMap.get(DcMotor.class, "left_rear");
-        rightRear = hardwareMap.get(DcMotor.class, "right_rear");
-        leftOdom = hardwareMap.get(DcMotor.class, "left_intake");
-        rightOdom = hardwareMap.get(DcMotor.class, "right_intake");
-        horizontalOdom = hardwareMap.get(DcMotor.class, "horizontal_odom");
+    public AutoDrive(LinearOpMode op) {
+        opmode = op;
+        leftFront = opmode.hardwareMap.get(DcMotor.class, "left_front");
+        rightFront = opmode.hardwareMap.get(DcMotor.class, "right_front");
+        leftRear = opmode.hardwareMap.get(DcMotor.class, "left_rear");
+        rightRear = opmode.hardwareMap.get(DcMotor.class, "right_rear");
+        leftOdom = opmode.hardwareMap.get(DcMotor.class, "left_intake");
+        rightOdom = opmode.hardwareMap.get(DcMotor.class, "right_intake");
+        horizontalOdom = opmode.hardwareMap.get(DcMotor.class, "horizontal_odom");
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
         leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -89,12 +84,12 @@ public class AutoDrive extends LinearOpMode {
         leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        odometryThread = new OdometryThread(this, leftOdom, rightOdom, horizontalOdom);
-        driveController = new DriveController(this, leftFront, rightFront, leftRear, rightRear, odometryThread);
+        odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
+        driveController = new DriveController(opmode, leftFront, rightFront, leftRear, rightRear, odometryThread);
 
-        //initImu();
+        startOdometry();
 
-        telemetry.addLine().addData("Pos: ", new Func<String>() {
+        /*opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "x: %.3f, y: %.3f, theta: %.3f, " +
@@ -103,14 +98,14 @@ public class AutoDrive extends LinearOpMode {
                         posAndVel[3], posAndVel[4], posAndVel[5]);
             }
         });
-        telemetry.addLine().addData("Output: ", new Func<String>() {
+        opmode.telemetry.addLine().addData("Output: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "xVel: %.3f, yVel: %.3f, tVel: %.3f", xVel, yVel, tVel);
             }
-        });
-        odometryThread.start();
-        waitForStart();
+        });*/
+        //odometryThread.start();
+        /*waitForStart();
         drive(0, 24, Math.PI / 2);
         drive(24, 24, Math.PI / 2);
         drive(24, 24, -Math.PI / 2);
@@ -119,11 +114,11 @@ public class AutoDrive extends LinearOpMode {
         drive(0, 0, Math.PI / 2, 0.2, 0.1, 5);
         sleep(5000);
         drive(24, 24, Math.PI, 0.2, 0.1, 5);
-        sleep(5000);
-        odometryThread.end();
+        sleep(5000);*/
+        //odometryThread.end();
     }
 
-    private void drive(double x, double y, double theta, double tolerance, double tTolerance, double timeout) {
+    public void drive(double x, double y, double theta, double tolerance, double tTolerance, double timeout) {
         /*telemetry.addData("", "Not done yet");
         telemetry.update();*/
         double errorX;
@@ -208,51 +203,49 @@ public class AutoDrive extends LinearOpMode {
             /*telemetry.addData("", "wEX: %.2f, wEY: %.2f, eX %.2f, eY %.2f, eT: %.2f",
                     worldErrorX, worldErrorY, errorX, errorY, errorTheta);
             telemetry.update();*/
-            telemetry.update();
+            //opmode.telemetry.update();
             driveController.velDrive(xVel, yVel, tVel);
-        } while (opModeIsActive());
+        } while (opmode.opModeIsActive());
         //} while (opModeIsActive() && (runtime.seconds() - startTime) < 5);
         driveController.powerMotors(0, 0, 0);
     }
 
-    private void drive(double x, double y, double theta, double timeout) {
+    public void drive(double x, double y, double theta, double timeout) {
         drive(x, y, theta, defTolerance, defToleranceT, timeout);
     }
 
-    private void drive(double x, double y, double theta, double tol, double tTol) {
+    public void drive(double x, double y, double theta, double tol, double tTol) {
         drive(x, y, theta, tol, tTol, defaultTimeout);
     }
 
-    private void drive(double x, double y, double theta) {
+    public void drive(double x, double y, double theta) {
         drive(x, y, theta, defTolerance, defToleranceT, defaultTimeout);
     }
 
-    public void setCurTime() {
+    public void powerMotors(double strafe, double drive, double turn, double timeout) {
+        double startTime = runtime.seconds();
+        driveController.setMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        do {
+            setCurTime();
+            driveController.powerMotors(strafe, drive, turn);
+        } while (opmode.opModeIsActive() && curTime - startTime < timeout);
+        driveController.powerMotors(0, 0, 0);
+        driveController.setMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+
+    private void setCurTime() {
         curTime = runtime.seconds();
     }
 
-    public void setPrevTime() {
+    private void setPrevTime() {
         prevTime = curTime;
     }
 
-    /*public double getHeading(){
-        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.RADIANS);
-        return angles.firstAngle;
+    public void startOdometry() {
+        odometryThread.start();
     }
 
-    private void initImu() {
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
-        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.loggingEnabled = true;
-        parameters.loggingTag = "imu";
-        //parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
-        imu = hardwareMap.get(BNO055IMU.class, "imu");
-        imu.initialize(parameters);
-
-        while (!isStopRequested() && !imu.isGyroCalibrated()) {
-            sleep(50);
-            idle();
-        }
-    }*/
+    public void stopOdometry() {
+        odometryThread.end();
+    }
 }
