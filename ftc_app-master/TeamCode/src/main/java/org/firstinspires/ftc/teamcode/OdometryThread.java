@@ -23,7 +23,7 @@ public class OdometryThread extends Thread {
     }
 
     public void run() {
-        while (run) {
+        while(run) {
             posAndVel = odometry.getPosAndVel();
             try {
                 Thread.sleep(50);

@@ -14,17 +14,17 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import java.util.Arrays;
 import java.util.Locale;
 
-@TeleOp(name="Teleop1", group="Linear Opmode")
-public class Teleop1 extends LinearOpMode {
-    /*private OdometryThread odometryThread;
-    private double posAndVel[];*/
+@TeleOp(name="Teleop2 - Field Centric", group="Linear Opmode")
+public class Teleop2FieldCentric extends LinearOpMode {
+    private OdometryThread odometryThread;
+    private double posAndVel[];
     private DcMotor leftFront;
     private DcMotor rightFront;
     private DcMotor leftRear;
     private DcMotor rightRear;
-    /*private DcMotor leftOdom;
+    private DcMotor leftOdom;
     private DcMotor rightOdom;
-    private DcMotor horizontalOdom;*/
+    private DcMotor horizontalOdom;
 
     private Servo leftIntakeLift;
     private Servo rightIntakeLift;
@@ -53,9 +53,9 @@ public class Teleop1 extends LinearOpMode {
         rightFront = hardwareMap.get(DcMotor.class, "right_front");
         leftRear = hardwareMap.get(DcMotor.class, "left_rear");
         rightRear = hardwareMap.get(DcMotor.class, "right_rear");
-        /*leftOdom = hardwareMap.get(DcMotor.class, "left_intake");
+        leftOdom = hardwareMap.get(DcMotor.class, "left_intake");
         rightOdom = hardwareMap.get(DcMotor.class, "right_intake");
-        horizontalOdom = hardwareMap.get(DcMotor.class, "horizontal_odom");*/
+        horizontalOdom = hardwareMap.get(DcMotor.class, "horizontal_odom");
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
         leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -67,12 +67,12 @@ public class Teleop1 extends LinearOpMode {
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        /*leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);*/
+        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         leftIntakeLift = hardwareMap.get(Servo.class, "left_intake_lift");
         rightIntakeLift = hardwareMap.get(Servo.class, "right_intake_lift");
@@ -84,16 +84,9 @@ public class Teleop1 extends LinearOpMode {
         rightHook = hardwareMap.get(Servo.class, "right_hook");
         rightHook.setDirection(Servo.Direction.REVERSE);
 
-        /*leftIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);*/
-
         intakeSensor = hardwareMap.get(DistanceSensor.class, "intake_sensor");
 
-        /*odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
+        odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
         telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
@@ -103,14 +96,14 @@ public class Teleop1 extends LinearOpMode {
                         posAndVel[3], posAndVel[4], posAndVel[5]);
             }
         });
-        telemetry.addLine().addData("Lifts: ", new Func<String>() {
+        /*telemetry.addLine().addData("Lifts: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "left: %.3f, right: %.3f",
                         leftIntakeLift.getPosition(), rightIntakeLift.getPosition());
             }
         });*/
-        //odometryThread.start();
+        odometryThread.start();
         waitForStart();
         while (opModeIsActive()) {
             updateDriving(gamepad1);
@@ -119,10 +112,11 @@ public class Teleop1 extends LinearOpMode {
             updateHooks(gamepad1);
             //telemetry.update();
         }
-        //odometryThread.end();
+        odometryThread.end();
     }
 
     private void updateDriving(Gamepad gpad) {
+        double[] posAndVel = odometryThread.getPosAndVel();
         if(gpad.left_bumper){
             driveSpeed = 0.3;
             strafeSpeed = 0.6;
@@ -133,6 +127,11 @@ public class Teleop1 extends LinearOpMode {
         double drivePow = -gpad.left_stick_y * driveSpeed;
         double strafePow = gpad.left_stick_x * strafeSpeed;
         double turnPow = -gpad.right_stick_x * driveSpeed;
+
+        double thetaOffset = posAndVel[2] - (Math.PI / 2);
+        strafePow = (strafePow * Math.cos(thetaOffset) - (drivePow * Math.sin(thetaOffset)));
+        drivePow = (strafePow * Math.sin(thetaOffset) + (drivePow * Math.cos(thetaOffset)));
+
         double leftFrontPow = -drivePow - strafePow + turnPow;
         double rightFrontPow = -drivePow + strafePow - turnPow;
         double leftRearPow = -drivePow + strafePow + turnPow;

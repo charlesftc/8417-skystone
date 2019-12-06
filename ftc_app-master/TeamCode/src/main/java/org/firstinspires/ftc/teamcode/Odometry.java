@@ -77,12 +77,12 @@ public class Odometry {
         }
         //the predicted side delta that would occur if the robot simply turned on its center
         //the measured amount
-        double predictedDeltaSide = deltaHeading * -verticalDistance;
+        double predictedDeltaSide = deltaHeading * verticalDistance;
         //the distance traveled sideways = the actual side delta - the portion of that which is
         //accounted for by the measured rotation
         double deltaSide = deltaH - predictedDeltaSide;
-        //sin and cos of theta are used to translate the straight and sideways deltas into world
-        //coordinates
+        //sin and cos of theta (modified by an offset) are used to translate the straight and
+        //sideways deltas into world coordinates
         double thetaOffset = posAndVel[2] - (Math.PI / 2);
         double dX = (deltaSide * Math.cos(thetaOffset) - (deltaStraight * Math.sin(thetaOffset)));
         double dY = (deltaSide * Math.sin(thetaOffset) + (deltaStraight * Math.cos(thetaOffset)));
