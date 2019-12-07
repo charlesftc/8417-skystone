@@ -33,7 +33,7 @@ public class Teleop1 extends LinearOpMode {
 
     private DistanceSensor intakeSensor;
 
-    private boolean intakeStopped;
+    private boolean intakeStopped = false;
 
     private Servo leftHook;
     private Servo rightHook;
@@ -46,6 +46,7 @@ public class Teleop1 extends LinearOpMode {
     private boolean prevA;
     private boolean prevB;
     private boolean prevRightBumper;
+    private boolean prevHasStone;
 
     @Override
     public void runOpMode() {
@@ -157,12 +158,13 @@ public class Teleop1 extends LinearOpMode {
         if (rightBumper) {
             if (!prevRightBumper) {
                 intakeStopped = false;
+            } else if (!prevHasStone && hasStone) {
+                intakeStopped = true;
             }
-            if (!hasStone && !intakeStopped) {
+            if (!intakeStopped) {
                 leftIntake.setPower(-intakePow);
                 rightIntake.setPower(intakePow);
             } else {
-                intakeStopped = true;
                 leftIntake.setPower(0);
                 rightIntake.setPower(0);
             }
@@ -174,6 +176,7 @@ public class Teleop1 extends LinearOpMode {
             rightIntake.setPower(0);
         }
         prevRightBumper = rightBumper;
+        prevHasStone = hasStone;
     }
 
     private void updateLifts(Gamepad gpad) {
@@ -184,8 +187,8 @@ public class Teleop1 extends LinearOpMode {
             leftIntakeLift.setPosition(0.6);
             rightIntakeLift.setPosition(0.6);
         } else {
-            leftIntakeLift.setPosition(0.315);
-            rightIntakeLift.setPosition(0.315);
+            leftIntakeLift.setPosition(0.26);
+            rightIntakeLift.setPosition(0.26);
         }
     }
 

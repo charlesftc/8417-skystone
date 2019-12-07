@@ -46,6 +46,7 @@ public class Teleop2FieldCentric extends LinearOpMode {
     private boolean prevA;
     private boolean prevB;
     private boolean prevRightBumper;
+    private boolean prevHasStone;
 
     @Override
     public void runOpMode() {
@@ -87,6 +88,8 @@ public class Teleop2FieldCentric extends LinearOpMode {
         intakeSensor = hardwareMap.get(DistanceSensor.class, "intake_sensor");
 
         odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
+        telemetry.addData("Status", "Ready to start!");
+        telemetry.update();
         telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
@@ -116,7 +119,7 @@ public class Teleop2FieldCentric extends LinearOpMode {
     }
 
     private void updateDriving(Gamepad gpad) {
-        double[] posAndVel = odometryThread.getPosAndVel();
+        posAndVel = odometryThread.getPosAndVel();
         if(gpad.left_bumper){
             driveSpeed = 0.3;
             strafeSpeed = 0.6;
@@ -124,13 +127,13 @@ public class Teleop2FieldCentric extends LinearOpMode {
             driveSpeed = 1;
             strafeSpeed = 2;
         }
-        double drivePow = -gpad.left_stick_y * driveSpeed;
-        double strafePow = gpad.left_stick_x * strafeSpeed;
+        double yPow = -gpad.left_stick_y * driveSpeed;
+        double xPow = gpad.left_stick_x * strafeSpeed;
         double turnPow = -gpad.right_stick_x * driveSpeed;
 
-        double thetaOffset = posAndVel[2] - (Math.PI / 2);
-        strafePow = (strafePow * Math.cos(thetaOffset) - (drivePow * Math.sin(thetaOffset)));
-        drivePow = (strafePow * Math.sin(thetaOffset) + (drivePow * Math.cos(thetaOffset)));
+        double thetaOffset = -(posAndVel[2] - (Math.PI / 2));
+        double strafePow = (xPow * Math.cos(thetaOffset) - (yPow * Math.sin(thetaOffset)));
+        double drivePow = (xPow * Math.sin(thetaOffset) + (yPow * Math.cos(thetaOffset)));
 
         double leftFrontPow = -drivePow - strafePow + turnPow;
         double rightFrontPow = -drivePow + strafePow - turnPow;
@@ -148,6 +151,7 @@ public class Teleop2FieldCentric extends LinearOpMode {
         rightFront.setPower(rightFrontPow);
         leftRear.setPower(leftRearPow);
         rightRear.setPower(rightRearPow);
+        telemetry.update();
     }
 
     private void updateIntake(Gamepad gpad) {
@@ -156,12 +160,13 @@ public class Teleop2FieldCentric extends LinearOpMode {
         if (rightBumper) {
             if (!prevRightBumper) {
                 intakeStopped = false;
+            } else if (!prevHasStone && hasStone) {
+                intakeStopped = true;
             }
-            if (!hasStone && !intakeStopped) {
+            if (!intakeStopped) {
                 leftIntake.setPower(-intakePow);
                 rightIntake.setPower(intakePow);
             } else {
-                intakeStopped = true;
                 leftIntake.setPower(0);
                 rightIntake.setPower(0);
             }
@@ -173,6 +178,7 @@ public class Teleop2FieldCentric extends LinearOpMode {
             rightIntake.setPower(0);
         }
         prevRightBumper = rightBumper;
+        prevHasStone = hasStone;
     }
 
     private void updateLifts(Gamepad gpad) {
@@ -183,8 +189,8 @@ public class Teleop2FieldCentric extends LinearOpMode {
             leftIntakeLift.setPosition(0.6);
             rightIntakeLift.setPosition(0.6);
         } else {
-            leftIntakeLift.setPosition(0.315);
-            rightIntakeLift.setPosition(0.315);
+            leftIntakeLift.setPosition(0.26);
+            rightIntakeLift.setPosition(0.26);
         }
     }
 

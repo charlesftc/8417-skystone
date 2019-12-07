@@ -18,26 +18,29 @@ public class OneStoneQuarryAutoBlue extends LinearOpMode {
         waitForStart();
 
         autoController.setHookPos(0);
-        autoController.setIntakeLiftPos(0.315);
+        autoController.setIntakeLiftPos(0.26);
         autoDrive.drive(-6.5, 22, 0.733, 0.25, 0.15, 2);
         autoController.intakeStone(1, 0.8);
         autoDrive.powerMotors(0, 0.35, 0, 0.8);
         autoDrive.powerMotors(0, -0.5, 0, 0.1);
-        autoDrive.drive(-6, 14, Math.PI / 2, 1.5);
+        autoDrive.drive(-6, 14, Math.PI / 2, 1.3);
 
-        autoDrive.drive(-68, 22, Math.PI / 2, 0.3, 0.15, 2);
-        autoController.setIntakeLiftPos(0.55);
-        autoDrive.powerMotors(0, 0.22, 0, 1.4);
+        autoDrive.drive(-64, 16, Math.PI / 2, 0.3, 0.15, 2);
+        autoController.setIntakeLiftPos(0.52);
+        autoDrive.powerMotors(0, 0.22, 0, 1.7);
         autoController.setHookPos(1);
-        autoController.setIntakePow(-0.25);
+        autoController.setIntakeLiftPos(0.4);
         sleep(1000);
-        autoController.setIntakePow(0);
-        autoDrive.drive(-68, 4, Math.PI / 2, 0.3, 0.15, 3); //theta: 1.658
-        autoDrive.powerMotors(0, -0.25, 0, 0.5);
+        autoController.setIntakePow(-0.28);
+        //autoController.setIntakePow(0);
+        //autoDrive.drive(-65, 4, Math.PI / 2, 0.3, 0.15, 3); //theta: 1.658
+        autoDrive.powerMotors(0, -0.65, 0, 1.6);//-0.8
         autoController.setHookPos(0);
-        sleep(2000);
-        autoDrive.drive(-21, 2, Math.PI / 2, 0.5, 0.3, 30);
-        sleep(3000);
+        autoController.setIntakeLiftPos(0.8);
+        sleep(1500);
+        autoController.setIntakePow(0);
+        autoDrive.drive(-19, 2, Math.PI / 2, 1, 1, 30);
+        //sleep(3000);
 
         autoDrive.stopOdometry();
     }

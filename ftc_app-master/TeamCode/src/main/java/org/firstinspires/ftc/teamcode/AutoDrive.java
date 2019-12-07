@@ -85,6 +85,8 @@ public class AutoDrive {
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
+        opmode.telemetry.addData("Status", "Ready to start!");
+        opmode.telemetry.update();
         driveController = new DriveController(opmode, leftFront, rightFront, leftRear, rightRear, odometryThread);
 
         startOdometry();
