@@ -153,29 +153,31 @@ public class Teleop1 extends LinearOpMode {
     }
 
     private void updateIntake(Gamepad gpad) {
+        //test to see if the right bumper is being held down
         boolean rightBumper = gpad.right_bumper;
+        //test to see if there is a stone in the intake
         boolean hasStone = intakeSensor.getDistance(DistanceUnit.CM) <= 6;
         if (rightBumper) {
-            if (!prevRightBumper) {
-                intakeStopped = false;
-            } else if (!prevHasStone && hasStone) {
-                intakeStopped = true;
+            if (!prevRightBumper) {     //if the right bumper has been re-pressed, make sure the
+                intakeStopped = false;  //intake is not in auto-termination mode
+            } else if (!prevHasStone && hasStone) { //otherwise, if a stone was just collected,
+                intakeStopped = true;               //enter auto-termination mode
             }
-            if (!intakeStopped) {
-                leftIntake.setPower(-intakePow);
+            if (!intakeStopped) {                //if the intake is not in auto-termination mode,
+                leftIntake.setPower(-intakePow); //command the motors to intake
                 rightIntake.setPower(intakePow);
-            } else {
+            } else { //otherwise, stop the motors
                 leftIntake.setPower(0);
                 rightIntake.setPower(0);
             }
-        } else if (gpad.left_trigger > 0.05) {
-            leftIntake.setPower(maxDispensePow * gamepad1.left_trigger);
-            rightIntake.setPower(-maxDispensePow * gamepad1.left_trigger);
-        } else {
+        } else if (gpad.left_trigger > 0.05) {                             //if the left trigger is
+            leftIntake.setPower(maxDispensePow * gamepad1.left_trigger);   //being pressed, command
+            rightIntake.setPower(-maxDispensePow * gamepad1.left_trigger); //the motors to dispense
+        } else { //otherwise, stop the motors
             leftIntake.setPower(0);
             rightIntake.setPower(0);
         }
-        prevRightBumper = rightBumper;
+        prevRightBumper = rightBumper; //update global variables for the next iteration
         prevHasStone = hasStone;
     }
 

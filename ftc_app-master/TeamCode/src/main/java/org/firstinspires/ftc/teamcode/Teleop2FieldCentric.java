@@ -113,13 +113,15 @@ public class Teleop2FieldCentric extends LinearOpMode {
             updateIntake(gamepad1);
             updateLifts(gamepad1);
             updateHooks(gamepad1);
-            //telemetry.update();
+            telemetry.update();
         }
         odometryThread.end();
     }
 
     private void updateDriving(Gamepad gpad) {
+        //get updated x, y and theta positions and velocities
         posAndVel = odometryThread.getPosAndVel();
+        //if the left bumper is being held down, use slowmode
         if(gpad.left_bumper){
             driveSpeed = 0.3;
             strafeSpeed = 0.6;
@@ -127,19 +129,23 @@ public class Teleop2FieldCentric extends LinearOpMode {
             driveSpeed = 1;
             strafeSpeed = 2;
         }
+        //get target x, y and turning power levels by reading the gamepad stick positions
         double yPow = -gpad.left_stick_y * driveSpeed;
         double xPow = gpad.left_stick_x * strafeSpeed;
         double turnPow = -gpad.right_stick_x * driveSpeed;
-
+        //the current theta (modified by an offset) is used to translate world-relative x and y
+        //power levels into robot-relative strafing and driving power levels
         double thetaOffset = -(posAndVel[2] - (Math.PI / 2));
         double strafePow = (xPow * Math.cos(thetaOffset) - (yPow * Math.sin(thetaOffset)));
         double drivePow = (xPow * Math.sin(thetaOffset) + (yPow * Math.cos(thetaOffset)));
-
+        //the driving, strafing and turning levels are translated into individual motor power levels
         double leftFrontPow = -drivePow - strafePow + turnPow;
         double rightFrontPow = -drivePow + strafePow - turnPow;
         double leftRearPow = -drivePow + strafePow + turnPow;
         double rightRearPow = -drivePow - strafePow - turnPow;
-        double[] powers = {Math.abs(leftFrontPow), Math.abs(rightFrontPow), Math.abs(leftRearPow), Math.abs(rightRearPow)};
+        //the powers are scaled proportionately so as not to exceed -1 or 1
+        double[] powers = {Math.abs(leftFrontPow), Math.abs(rightFrontPow), Math.abs(leftRearPow),
+                           Math.abs(rightRearPow)};
         Arrays.sort(powers);
         if (powers[3] > 1) {
             leftFrontPow /= powers[3];
@@ -147,11 +153,11 @@ public class Teleop2FieldCentric extends LinearOpMode {
             leftRearPow /= powers[3];
             rightRearPow /= powers[3];
         }
+        //apply the power levels to the corresponding motors
         leftFront.setPower(leftFrontPow);
         rightFront.setPower(rightFrontPow);
         leftRear.setPower(leftRearPow);
         rightRear.setPower(rightRearPow);
-        telemetry.update();
     }
 
     private void updateIntake(Gamepad gpad) {

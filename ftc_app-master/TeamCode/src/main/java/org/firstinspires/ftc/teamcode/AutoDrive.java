@@ -22,19 +22,19 @@ public class AutoDrive {
     private DcMotor rightOdom;
     private DcMotor horizontalOdom;
 
-    private double kP = 0.6; //0.6
-    private double thetaKP = 0.6; //0.6
+    private double kP = 0.6;
+    private double thetaKP = 0.6;
 
     private double xErrorSum = 0;
     private double yErrorSum = 0;
     private double tErrorSum = 0;
     private double maxErrorSum = 0.4;
     private double maxTErrorSum = 0.45;
-    private double kI = 0.5; //0.65
-    private double thetaKI = 0.7; //0.9
+    private double kI = 0.5;
+    private double thetaKI = 0.7;
 
-    private double kD = 0.002; //.004
-    private double thetaKD = 0.0025; //.005
+    private double kD = 0.002;
+    private double thetaKD = 0.0025;
     private double maxDError = 0.2;
     private double maxDErrorT = 0.2;
     private double prevErrorX = 0;
@@ -87,10 +87,11 @@ public class AutoDrive {
         odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
         opmode.telemetry.addData("Status", "Ready to start!");
         opmode.telemetry.update();
-        driveController = new DriveController(opmode, leftFront, rightFront, leftRear, rightRear, odometryThread);
-
+        driveController = new DriveController(opmode, leftFront, rightFront, leftRear, rightRear,
+                          odometryThread);
         startOdometry();
 
+        //optional telemetry of position and velocity:
         /*opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
@@ -99,77 +100,49 @@ public class AutoDrive {
                         posAndVel[0], posAndVel[1], posAndVel[2] * (180 / Math.PI),
                         posAndVel[3], posAndVel[4], posAndVel[5]);
             }
-        });
-        opmode.telemetry.addLine().addData("Output: ", new Func<String>() {
-            @Override
-            public String value() {
-                return String.format(Locale.getDefault(), "xVel: %.3f, yVel: %.3f, tVel: %.3f", xVel, yVel, tVel);
-            }
         });*/
-        //odometryThread.start();
-        /*waitForStart();
-        drive(0, 24, Math.PI / 2);
-        drive(24, 24, Math.PI / 2);
-        drive(24, 24, -Math.PI / 2);
-        drive(24, 0, -Math.PI / 2);
-        drive(0, 0, -Math.PI / 2);
-        drive(0, 0, Math.PI / 2, 0.2, 0.1, 5);
-        sleep(5000);
-        drive(24, 24, Math.PI, 0.2, 0.1, 5);
-        sleep(5000);*/
-        //odometryThread.end();
     }
 
-    public void drive(double x, double y, double theta, double tolerance, double tTolerance, double timeout) {
-        /*telemetry.addData("", "Not done yet");
-        telemetry.update();*/
+    public void drive(double x, double y, double theta, double tolerance, double tTolerance,
+                      double timeout) {
         double errorX;
         double errorY;
         double errorTheta;
         double startTime = runtime.seconds();
         do {
             setCurTime();
-            double elapsedTime = curTime - prevTime;
-            setPrevTime();
+            double elapsedTime = curTime - prevTime; //the time elapsed since the previous iteration
+            setPrevTime();                           //is calculated
+            //current x, y and theta positions and velocities are gotten
             posAndVel = odometryThread.getPosAndVel();
-            double worldErrorX = x - posAndVel[0];
+            double worldErrorX = x - posAndVel[0]; //x and y world errors are calculated
             double worldErrorY = y - posAndVel[1];
+            //the current theta (modified by an offset) is used to translate world-relative x and y
+            //errors into robot-relative x and y errors
             double thetaOffset = -(posAndVel[2] - (Math.PI / 2));
             errorX = (worldErrorX * Math.cos(thetaOffset) - (worldErrorY * Math.sin(thetaOffset)));
             errorY = (worldErrorX * Math.sin(thetaOffset) + (worldErrorY * Math.cos(thetaOffset)));
+            //the theta error is calculated and normalized
             errorTheta = AngleUnit.normalizeRadians(theta - posAndVel[2]);
 
-            //if (Math.abs(errorTheta) < 0.1) {
-            if ((Math.abs(errorY) < tolerance && Math.abs(errorX) < tolerance && Math.abs(errorTheta) < tTolerance) ||
-                    (curTime - startTime) >= timeout) {
-                /*telemetry.addData("", "I done boi!");
-                telemetry.update();*/
+            //if we are within a small distance of the target position in all three dimensions or
+            //the timeout has been reached, exit the control loop; if not, continue
+            if ((Math.abs(errorY) < tolerance && Math.abs(errorX) < tolerance &&
+                 Math.abs(errorTheta) < tTolerance) || (curTime - startTime) >= timeout) {
                 break;
             }
 
-            //double ySign = Math.copySign(1.0, errorY);
-            //errorY = Range.clip(Range.scale(Math.abs(errorY), -brakingDist, brakingDist, 0, 1) * ySign, -1, 1);
-
+            //the errors are scaled and clipped to a scale of -1 to 1
             errorX = Range.clip(Range.scale(errorX, -brakingDist, brakingDist, -1, 1),
                     -1, 1);
             errorY = Range.clip(Range.scale(errorY, -brakingDist, brakingDist, -1, 1),
                     -1, 1);
             errorTheta = Range.clip(Range.scale(errorTheta, -turnBrakingDist, turnBrakingDist,
                     -1, 1), -1, 1);
-            /*double xVel = errorX * kP;
-            double yVel = errorY * kP;
-            double tVel = errorTheta * thetaKP;*/
 
-            /*if (errorX == 0 && posAndVel[3] == 0) {
-                xErrorSum = 0;
-            }
-            if (errorY == 0 && posAndVel[4] == 0) {
-                yErrorSum = 0;
-            }
-            if (errorTheta == 0 && posAndVel[5] == 0) {
-                tErrorSum = 0;
-            }*/
 
+            //the error sums for each of three dimensions are updated and clipped (for the integral
+            //component)
             xErrorSum += errorX * elapsedTime * kI;
             yErrorSum += errorY * elapsedTime * kI;
             tErrorSum += errorTheta * elapsedTime * thetaKI;
@@ -177,38 +150,47 @@ public class AutoDrive {
             yErrorSum = Range.clip(yErrorSum, -maxErrorSum, maxErrorSum);
             tErrorSum = Range.clip(tErrorSum, -maxTErrorSum, maxTErrorSum);
 
-            double dErrorX = Range.clip(kD * (errorX - prevErrorX) / elapsedTime, -maxDError, maxDError);
-            double dErrorY = Range.clip(kD * (errorY - prevErrorY) / elapsedTime, -maxDError, maxDError);
-            double dErrorT = Range.clip(thetaKD * (errorTheta - prevErrorT) / elapsedTime, -maxDErrorT, maxDErrorT);
+            //the derivative errors are calculated and clipped
+            double dErrorX = Range.clip(kD * (errorX - prevErrorX) / elapsedTime,
+                             -maxDError, maxDError);
+            double dErrorY = Range.clip(kD * (errorY - prevErrorY) / elapsedTime,
+                             -maxDError, maxDError);
+            double dErrorT = Range.clip(thetaKD * (errorTheta - prevErrorT) / elapsedTime,
+                             -maxDErrorT, maxDErrorT);
 
-            /*double xVel;
-            double yVel;
-            double tVel;*/
-
+            //if we are near the target x position and are traveling quickly, slam on the brakes in
+            //the x dimension
+            //otherwise, calculate the desired x velocity by adding the proportional, integral, and
+            //derivative components together
             if (Math.abs(errorX) < 1 && Math.abs(posAndVel[3]) > velThreshold) {
                 xVel = 0;
             } else {
                 xVel = (errorX * kP) + xErrorSum + dErrorX;
             }
 
+            //if we are near the target x position and are traveling quickly, slam on the brakes in
+            //the x dimension
+            //otherwise, calculate the desired y velocity by adding the proportional, integral, and
+            //derivative components together
             if (Math.abs(errorY) < 1 && Math.abs(posAndVel[4]) > velThreshold) {
                 yVel = 0;
             } else {
                 yVel = (errorY * kP) + yErrorSum + dErrorY;
             }
 
+            //if we are near the target heading and are turning quickly, slam on the brakes in the
+            //theta dimension
+            //otherwise, calculate the desired theta velocity by adding the proportional, integral,
+            //and derivative components together
             if (Math.abs(errorTheta) < 1 && Math.abs(posAndVel[5]) > turnVelThreshold) {
                 tVel = 0;
             } else {
                 tVel = (errorTheta * thetaKP) + tErrorSum + dErrorT;
             }
-            /*telemetry.addData("", "wEX: %.2f, wEY: %.2f, eX %.2f, eY %.2f, eT: %.2f",
-                    worldErrorX, worldErrorY, errorX, errorY, errorTheta);
-            telemetry.update();*/
-            //opmode.telemetry.update();
+            //output the x, y and theta velocity setpoints to stage 2
             driveController.velDrive(xVel, yVel, tVel);
         } while (opmode.opModeIsActive());
-        //} while (opModeIsActive() && (runtime.seconds() - startTime) < 5);
+        //after terminating the loop, stop the motors
         driveController.powerMotors(0, 0, 0);
     }
 

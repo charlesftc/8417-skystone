@@ -55,18 +55,22 @@ public class AutoController {
     }
 
     public void intakeStone(final double pow, final double timeout) {
+        //runs on a separate thread so other commands (driving, etc.) can happen concurrently
         intakeThread = new Thread() {
             public void run() {
                 double startTime = runtime.seconds();
+                //intake at the specified power level until the opmode is no longer active, the
+                //timeout has been reached, or a stone has been collected
                 while (opmode.opModeIsActive() && runtime.seconds() - startTime < timeout) {
+                    //test to see if there is a stone in the intake
                     boolean hasStone = intakeSensor.getDistance(DistanceUnit.CM) <= 6;
-                    if (!hasStone) {
+                    if (!hasStone) { //if not, keep intaking
                         setIntakePow(pow);
-                    } else {
+                    } else { //if so, terminate the loop
                         break;
                     }
                 }
-                setIntakePow(0);
+                setIntakePow(0); //stop intaking to keep the motors from straining
             }
         };
         intakeThread.start();

@@ -26,19 +26,20 @@ public class Odometry {
     private int prevR = 0;
     private int prevH = 0;
     private double[] posAndVel; //array with the robot's world position stored as {x, y, theta}
-    private double maxVel;
+    private double maxVel; //max expected velocity and turning velocity of the robot
     private double maxTurnVel;
     private ElapsedTime runtime = new ElapsedTime();
-    private double prevTime = 0;
-
-    private double prevHeading;
-    private double angleOffset;
+    private double prevTime = 0; //the time stamp of the last iteration
+    private double prevHeading; //the heading calculated last iteration
+    private double angleOffset; //the constant amount by which the gyroscope's reading is modified
+                                //(equal to the robot's starting theta)
 
     BNO055IMU imu;
 
-    public Odometry (LinearOpMode op, DcMotor l, DcMotor r, DcMotor h, int ticksPerRev, double radius, double balance,
-                        double width, double verticalDistance, double x, double y, double theta,
-                        double xVel, double yVel, double tVel, double maxVel, double maxTurnVel) {
+    public Odometry (LinearOpMode op, DcMotor l, DcMotor r, DcMotor h, int ticksPerRev,
+                        double radius, double balance, double width, double verticalDistance,
+                        double x, double y, double theta, double xVel, double yVel, double tVel,
+                        double maxVel, double maxTurnVel) {
         opmode = op;
         left = l;
         right = r;
@@ -57,18 +58,22 @@ public class Odometry {
     }
 
     public double[] getPosAndVel() {
+        //the time elapsed since the last call of getPosAndVel() is calculated
         double curTime = runtime.milliseconds();
         double elapsedTime = curTime - prevTime;
         prevTime = curTime;
+        //the distance traveled by each of the odometry wheels is calculated
         double deltaL = getDeltaL();
         double deltaR = getDeltaR();
         double deltaH = getDeltaH();
-        //the distance travled forward/back = the average of the left and right deltas
+        //the distance traveled forward/back = the average of the left and right deltas
         double deltaStraight = (deltaL + deltaR) / 2;
-        //double deltaHeading = (deltaR - deltaL) / width;
+        //the current heading is read from the IMU and the delta since last frame is calculated
         double curHeading = getHeading();
         double deltaHeading = curHeading - prevHeading;
         prevHeading = curHeading;
+        //the delta is normalized to the range of -pi to +pi in order to correct the very large
+        //deltas which occur when the robot crosses the boundary at pi/-pi radians
         if (deltaHeading < -Math.PI) {
             deltaHeading += Math.PI * 2;
         }
@@ -86,10 +91,13 @@ public class Odometry {
         double thetaOffset = posAndVel[2] - (Math.PI / 2);
         double dX = (deltaSide * Math.cos(thetaOffset) - (deltaStraight * Math.sin(thetaOffset)));
         double dY = (deltaSide * Math.sin(thetaOffset) + (deltaStraight * Math.cos(thetaOffset)));
+        //the old x, y and theta values are updated with the new deltas
         posAndVel[0] += dX;
         posAndVel[1] += dY;
         posAndVel[2] += deltaHeading;
         if (elapsedTime > 0) {
+            //the current x, y and theta velocities are calculated from the deltas and the elapsed
+            //time
             double xVel = (deltaSide / elapsedTime) * 1000;
             double yVel = (deltaStraight / elapsedTime) * 1000;
             double tVel = (deltaHeading / elapsedTime) * 1000;
@@ -144,10 +152,8 @@ public class Odometry {
         parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
         parameters.loggingEnabled = true;
         parameters.loggingTag = "imu";
-        //parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
         imu = opmode.hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
-
         while (!opmode.isStopRequested() && !imu.isGyroCalibrated()) {
             opmode.sleep(50);
             opmode.idle();
