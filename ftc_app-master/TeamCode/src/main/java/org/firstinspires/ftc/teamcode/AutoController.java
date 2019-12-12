@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -15,13 +16,10 @@ public class AutoController {
     private Servo rightIntakeLift;
     private DcMotor leftIntake;
     private DcMotor rightIntake;
-
     private DistanceSensor intakeSensor;
 
     private Servo leftHook;
     private Servo rightHook;
-
-    private Thread intakeThread;
 
     public AutoController(LinearOpMode op) {
         opmode = op;
@@ -56,7 +54,7 @@ public class AutoController {
 
     public void intakeStone(final double pow, final double timeout) {
         //runs on a separate thread so other commands (driving, etc.) can happen concurrently
-        intakeThread = new Thread() {
+        Thread intakeThread = new Thread() {
             public void run() {
                 double startTime = runtime.seconds();
                 //intake at the specified power level until the opmode is no longer active, the

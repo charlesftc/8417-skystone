@@ -1,13 +1,18 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
+import java.util.Locale;
 
 public class AutoDrive {
     private LinearOpMode opmode;
@@ -59,6 +64,11 @@ public class AutoDrive {
     double yVel;
     double tVel;
 
+    DistanceSensor quarryDistSensorL;
+    DistanceSensor quarryDistSensorR;
+    ColorSensor quarryColorSensorL;
+    ColorSensor quarryColorSensorR;
+
     public AutoDrive(LinearOpMode op) {
         opmode = op;
         leftFront = opmode.hardwareMap.get(DcMotor.class, "left_front");
@@ -101,6 +111,20 @@ public class AutoDrive {
                         posAndVel[3], posAndVel[4], posAndVel[5]);
             }
         });*/
+
+        opmode.telemetry.addLine().addData("Quarry sensors: ", new Func<String>() {
+            @Override
+            public String value() {
+                return String.format(Locale.getDefault(), "left-dist: %.3f, right-dist: %.3f, left-color: %d, right-color: %d",
+                        quarryDistSensorL.getDistance(DistanceUnit.INCH), quarryDistSensorR.getDistance(DistanceUnit.INCH),
+                        quarryColorSensorL.red() + quarryColorSensorL.green(), quarryColorSensorR.red() + quarryColorSensorR.green());
+            }
+        });
+
+        quarryDistSensorL = opmode.hardwareMap.get(DistanceSensor.class, "quarry_sensor_l");
+        quarryDistSensorR = opmode.hardwareMap.get(DistanceSensor.class, "quarry_sensor_r");
+        quarryColorSensorL = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_l");
+        quarryColorSensorR = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_r");
     }
 
     public void drive(double x, double y, double theta, double tolerance, double tTolerance,
@@ -124,7 +148,6 @@ public class AutoDrive {
             errorY = (worldErrorX * Math.sin(thetaOffset) + (worldErrorY * Math.cos(thetaOffset)));
             //the theta error is calculated and normalized
             errorTheta = AngleUnit.normalizeRadians(theta - posAndVel[2]);
-
             //if we are within a small distance of the target position in all three dimensions or
             //the timeout has been reached, exit the control loop; if not, continue
             if ((Math.abs(errorY) < tolerance && Math.abs(errorX) < tolerance &&
@@ -208,13 +231,44 @@ public class AutoDrive {
 
     public void powerMotors(double strafe, double drive, double turn, double timeout) {
         double startTime = runtime.seconds();
-        driveController.setMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        //driveController.setMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         do {
             setCurTime();
             driveController.powerMotors(strafe, drive, turn);
         } while (opmode.opModeIsActive() && curTime - startTime < timeout);
         driveController.powerMotors(0, 0, 0);
-        driveController.setMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        //driveController.setMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+
+    public void findSkystone(int driveDir, double pow, double turnPow, double gapDist, double threshold, double turnThreshold, double timeout) {
+        double drive = 0;
+        double strafe = 0;
+        double turn = 0;
+        double startTime = runtime.seconds();
+        while (opmode.opModeIsActive()) {
+            setCurTime();
+            boolean skystoneLeft = quarryColorSensorL.alpha() < 20;
+            boolean skystoneRight = quarryColorSensorR.alpha() < 20;
+            double distLeft = quarryDistSensorL.getDistance(DistanceUnit.INCH);
+            double distRight = quarryDistSensorR.getDistance(DistanceUnit.INCH);
+            /*if (skystoneLeft && skystoneRight) {
+                drive = 0;
+            } else if (skystoneLeft) {
+                drive = pow;
+            } else if (skystoneRight) {
+                drive = -pow;
+            } else {
+                drive = pow * driveDir;
+            }*/
+            //strafe = Range.clip(((distLeft + distRight) / 2) - gapDist, -pow, pow);
+            //turn = Range.clip(distRight - distLeft, -turnPow, turnPow);
+            /*if ((drive < threshold && strafe < threshold && turn < turnThreshold) || curTime - startTime > threshold) {
+                break;
+            }*/
+            driveController.powerMotors(strafe, drive, turn);
+            opmode.telemetry.update();
+        }
+        driveController.powerMotors(0, 0, 0);
     }
 
     private void setCurTime() {

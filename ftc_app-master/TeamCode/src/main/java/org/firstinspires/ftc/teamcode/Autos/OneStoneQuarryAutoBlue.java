@@ -19,22 +19,22 @@ public class OneStoneQuarryAutoBlue extends LinearOpMode {
 
         autoController.setHookPos(0);
         autoController.setIntakeLiftPos(0.26);
-        autoDrive.drive(-6.5, 22, 0.75, 0.25, 0.15, 2);
-        autoController.intakeStone(1, 1);
-        autoDrive.powerMotors(0, 0.35, 0, 1);
-        autoDrive.powerMotors(0, -0.5, 0, 0.2);
+        autoDrive.drive(-6.5, 22, 0.79, 0.25, 0.15, 2);
+        autoController.intakeStone(0.6, 1.2);
+        autoDrive.powerMotors(0, 0.4, 0, 1.2);
+        autoDrive.powerMotors(0, -0.6, 0, 0.2);
         autoDrive.drive(-6, 12, Math.PI / 2, 1.5);
 
         autoDrive.drive(-65, 15, Math.PI / 2, 0.3, 0.15, 3.5);
         autoController.setIntakeLiftPos(0.52);
-        autoDrive.powerMotors(0, 0.24, 0, 1.4);
+        autoDrive.powerMotors(0, 0.25, 0, 1.4);
         autoController.setHookPos(1);
         autoController.setIntakeLiftPos(0.4);
         sleep(1000);
         autoController.setIntakePow(-0.28);
         //autoController.setIntakePow(0);
         autoDrive.drive(-65, 2, Math.PI / 2, 0.3, 0.15, 1.5); //theta: 1.658
-        autoDrive.powerMotors(0, -0.5, 0, 1);//-0.8
+        autoDrive.powerMotors(0, -1, 0, 0.8);//-0.8
         autoController.setHookPos(0);
         autoController.setIntakeLiftPos(0.8);
         sleep(1200);
