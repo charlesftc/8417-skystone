@@ -30,13 +30,14 @@ public class Teleop1 extends LinearOpMode {
     private Servo rightIntakeLift;
     private DcMotor leftIntake;
     private DcMotor rightIntake;
-
     private DistanceSensor intakeSensor;
 
     private boolean intakeStopped = false;
 
     private Servo leftHook;
     private Servo rightHook;
+    private Servo capstoneArm;
+    private Servo capstoneServo;
 
     private double driveSpeed = 1;
     private double strafeSpeed = 2;
@@ -85,6 +86,9 @@ public class Teleop1 extends LinearOpMode {
         rightHook = hardwareMap.get(Servo.class, "right_hook");
         rightHook.setDirection(Servo.Direction.REVERSE);
 
+        capstoneArm = hardwareMap.get(Servo.class, "capstone_arm");
+        capstoneServo = hardwareMap.get(Servo.class, "capstone_servo");
+
         /*leftIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -118,6 +122,7 @@ public class Teleop1 extends LinearOpMode {
             updateIntake(gamepad1);
             updateLifts(gamepad1);
             updateHooks(gamepad1);
+            updateCapstone(gamepad1);
             //telemetry.update();
         }
         //odometryThread.end();
@@ -206,5 +211,18 @@ public class Teleop1 extends LinearOpMode {
         }
         prevA = a;
         prevB = b;
+    }
+
+    private void updateCapstone(Gamepad gpad) {
+        if (gpad.dpad_right) {
+            capstoneArm.setPosition(1);
+        } else if (gpad.dpad_left) {
+            capstoneArm.setPosition(0);
+        }
+        if (gpad.dpad_down) {
+            capstoneServo.setPosition(1);
+        } else if (gpad.dpad_up) {
+            capstoneServo.setPosition(0);
+        }
     }
 }

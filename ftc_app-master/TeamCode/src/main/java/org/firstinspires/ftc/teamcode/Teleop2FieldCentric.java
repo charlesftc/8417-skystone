@@ -37,6 +37,8 @@ public class Teleop2FieldCentric extends LinearOpMode {
 
     private Servo leftHook;
     private Servo rightHook;
+    private Servo capstoneArm;
+    private Servo capstoneServo;
 
     private double driveSpeed = 1;
     private double strafeSpeed = 2;
@@ -85,6 +87,9 @@ public class Teleop2FieldCentric extends LinearOpMode {
         rightHook = hardwareMap.get(Servo.class, "right_hook");
         rightHook.setDirection(Servo.Direction.REVERSE);
 
+        capstoneArm = hardwareMap.get(Servo.class, "capstone_arm");
+        capstoneServo = hardwareMap.get(Servo.class, "capstone_servo");
+
         intakeSensor = hardwareMap.get(DistanceSensor.class, "intake_sensor");
 
         odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
@@ -113,6 +118,7 @@ public class Teleop2FieldCentric extends LinearOpMode {
             updateIntake(gamepad1);
             updateLifts(gamepad1);
             updateHooks(gamepad1);
+            updateCapstone(gamepad1);
             telemetry.update();
         }
         odometryThread.end();
@@ -212,5 +218,18 @@ public class Teleop2FieldCentric extends LinearOpMode {
         }
         prevA = a;
         prevB = b;
+    }
+
+    private void updateCapstone(Gamepad gpad) {
+        if (gpad.dpad_right) {
+            capstoneArm.setPosition(1);
+        } else if (gpad.dpad_left) {
+            capstoneArm.setPosition(0);
+        }
+        if (gpad.dpad_down) {
+            capstoneServo.setPosition(1);
+        } else if (gpad.dpad_up) {
+            capstoneServo.setPosition(0);
+        }
     }
 }
