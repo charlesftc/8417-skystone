@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.Autos;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.AutoController;
 
+@Disabled
 @Autonomous(name="OneStoneQuarryAuto-Red", group="Linear")
 public class OneStoneQuarryAutoRed extends LinearOpMode {
     AutoController autoController;
@@ -17,27 +19,31 @@ public class OneStoneQuarryAutoRed extends LinearOpMode {
 
         autoController.setHookPos(0);
         autoController.setIntakeLiftPos(0.26);
-        autoController.drive(6.5, 22, 2.35, 0.25, 0.15, 2);
-        autoController.intakeStone(0.6, 1.2);
-        autoController.powerMotors(0, 0.4, 0, 1.2);
-        autoController.powerMotors(0, -0.6, 0, 0.2);
-        autoController.drive(6, 12, Math.PI / 2, 1.5);
+        autoController.pidDrive(6.5, 22, 2.37, 0.25, 0.15, 2);
+        /*autoController.intakeStoneOLD(0.6, 1.2);
+        autoController.drive(0, 0.4, 0, 1.2);
+        autoController.drive(0, -0.6, 0, 0.2);
+        autoController.pidDrive(6, 12, Math.PI / 2, 1.5);*/
 
-        autoController.drive(65, 15, Math.PI / 2, 0.3, 0.15, 3.5);
+        autoController.intakeStoneOLD(1, 1.2);
+        autoController.drive(0, 0.5, 0, 1.2);
+        autoController.drive(0, -0.7, 0, 0.7, false);
+
+        autoController.pidDrive(65, 15, Math.PI / 2, 0.3, 0.15, 3.5);
         autoController.setIntakeLiftPos(0.52);
-        autoController.powerMotors(0, 0.25, 0, 1.4);
+        autoController.drive(0, 0.25, 0, 1.4);
         autoController.setHookPos(1);
         autoController.setIntakeLiftPos(0.4);
         sleep(1000);
         autoController.setIntakePow(-0.28);
         //autoController.setIntakePow(0);
-        autoController.drive(65, 2, Math.PI / 2, 0.3, 0.15, 1.5); //theta: 1.658
-        autoController.powerMotors(0, -1, 0, 0.8);//-0.8
+        autoController.pidDrive(65, 2, Math.PI / 2, 0.3, 0.15, 1.5); //theta: 1.658
+        autoController.drive(0, -1, 0, 0.8);//-0.8
         autoController.setHookPos(0);
         autoController.setIntakeLiftPos(0.8);
-        sleep(1200);
+        sleep(1000);
         autoController.setIntakePow(0);
-        autoController.drive(19, 2, Math.PI / 2, 1, 1, 30);
+        autoController.pidDrive(19, 2, Math.PI / 2, 1, 1, 30);
         //sleep(3000);
 
         autoController.stopOdometry();

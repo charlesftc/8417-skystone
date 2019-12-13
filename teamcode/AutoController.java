@@ -127,8 +127,8 @@ public class AutoController {
         quarryColorSensorR = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_r");
     }
 
-    public void drive(double x, double y, double theta, double tolerance, double tTolerance,
-                      double timeout) {
+    public void pidDrive(double x, double y, double theta, double tolerance, double tTolerance,
+                         double timeout) {
         double errorX;
         double errorY;
         double errorTheta;
@@ -217,27 +217,33 @@ public class AutoController {
         driveController.powerMotors(0, 0, 0);
     }
 
-    public void drive(double x, double y, double theta, double timeout) {
-        drive(x, y, theta, defTolerance, defToleranceT, timeout);
+    public void pidDrive(double x, double y, double theta, double timeout) {
+        pidDrive(x, y, theta, defTolerance, defToleranceT, timeout);
     }
 
-    public void drive(double x, double y, double theta, double tol, double tTol) {
-        drive(x, y, theta, tol, tTol, defaultTimeout);
+    public void pidDrive(double x, double y, double theta, double tol, double tTol) {
+        pidDrive(x, y, theta, tol, tTol, defaultTimeout);
     }
 
-    public void drive(double x, double y, double theta) {
-        drive(x, y, theta, defTolerance, defToleranceT, defaultTimeout);
+    public void pidDrive(double x, double y, double theta) {
+        pidDrive(x, y, theta, defTolerance, defToleranceT, defaultTimeout);
     }
 
-    public void powerMotors(double strafe, double drive, double turn, double timeout) {
+    public void drive(double strafe, double drive, double turn, double timeout, boolean usePowMode) {
         double startTime = runtime.seconds();
-        //driveController.setMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        if (usePowMode) {
+            driveController.setMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
         do {
             setCurTime();
             driveController.powerMotors(strafe, drive, turn);
         } while (opmode.opModeIsActive() && curTime - startTime < timeout);
         driveController.powerMotors(0, 0, 0);
-        //driveController.setMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        driveController.setMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+
+    public void drive (double strafe, double drive, double turn, double timeout) {
+        drive(strafe, drive, turn, timeout, true);
     }
 
     public void findSkystone(int driveDir, double pow, double turnPow, double gapDist, double threshold, double turnThreshold, double timeout) {
@@ -252,17 +258,17 @@ public class AutoController {
             double distLeft = quarryDistSensorL.getDistance(DistanceUnit.INCH);
             double distRight = quarryDistSensorR.getDistance(DistanceUnit.INCH);
             /*if (skystoneLeft && skystoneRight) {
-                drive = 0;
+                pidDrive = 0;
             } else if (skystoneLeft) {
-                drive = pow;
+                pidDrive = pow;
             } else if (skystoneRight) {
-                drive = -pow;
+                pidDrive = -pow;
             } else {
-                drive = pow * driveDir;
+                pidDrive = pow * driveDir;
             }*/
             //strafe = Range.clip(((distLeft + distRight) / 2) - gapDist, -pow, pow);
             //turn = Range.clip(distRight - distLeft, -turnPow, turnPow);
-            /*if ((drive < threshold && strafe < threshold && turn < turnThreshold) || curTime - startTime > threshold) {
+            /*if ((pidDrive < threshold && strafe < threshold && turn < turnThreshold) || curTime - startTime > threshold) {
                 break;
             }*/
             driveController.powerMotors(strafe, drive, turn);
@@ -294,7 +300,7 @@ public class AutoController {
         rightHook.setPosition(pos);
     }
 
-    public void intakeStone(final double pow, final double timeout) {
+    public void intakeStoneOLD(final double pow, final double timeout) {
         //runs on a separate thread so other commands (driving, etc.) can happen concurrently
         Thread intakeThread = new Thread() {
             public void run() {
@@ -311,6 +317,23 @@ public class AutoController {
                     }
                 }
                 setIntakePow(0); //stop intaking to keep the motors from straining
+            }
+        };
+        intakeThread.start();
+    }
+
+    public void intakeStone(final double strafe, final double drive, final double turn, final double pow,
+                            final double timeout) {
+        Thread intakeThread = new Thread() {
+            public void run() {
+                double startTime = runtime.seconds();
+                while (opmode.opModeIsActive() && runtime.seconds() - startTime < timeout &&
+                       !(intakeSensor.getDistance(DistanceUnit.CM) <= 6)) {
+                    driveController.powerMotors(strafe, drive, turn);
+                    setIntakePow(pow);
+                }
+                driveController.powerMotors(0, 0, 0);
+                setIntakePow(0);
             }
         };
         intakeThread.start();

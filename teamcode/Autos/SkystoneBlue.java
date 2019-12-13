@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.Autos;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.AutoController;
 
+@Disabled
 @Autonomous(name="Skystone-Blue", group="Linear")
 public class SkystoneBlue extends LinearOpMode {
     AutoController autoController;
