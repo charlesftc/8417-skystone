@@ -324,19 +324,14 @@ public class AutoController {
 
     public void intakeStone(final double strafe, final double drive, final double turn, final double pow,
                             final double timeout) {
-        Thread intakeThread = new Thread() {
-            public void run() {
-                double startTime = runtime.seconds();
-                while (opmode.opModeIsActive() && runtime.seconds() - startTime < timeout &&
-                       !(intakeSensor.getDistance(DistanceUnit.CM) <= 6)) {
-                    driveController.powerMotors(strafe, drive, turn);
-                    setIntakePow(pow);
-                }
-                driveController.powerMotors(0, 0, 0);
-                setIntakePow(0);
-            }
-        };
-        intakeThread.start();
+        double startTime = runtime.seconds();
+        while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
+               !(intakeSensor.getDistance(DistanceUnit.CM) <= 6)) {
+            driveController.powerMotors(strafe, drive, turn);
+            setIntakePow(pow);
+        }
+        driveController.powerMotors(0, 0, 0);
+        setIntakePow(0);
     }
 
     private void setCurTime() {
