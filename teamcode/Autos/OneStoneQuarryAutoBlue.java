@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.AutoController;
 
-@Disabled
 @Autonomous(name="OneStoneQuarryAuto-Blue", group="Linear")
 public class OneStoneQuarryAutoBlue extends LinearOpMode {
     AutoController autoController;

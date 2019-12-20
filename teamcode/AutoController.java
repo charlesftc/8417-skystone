@@ -9,8 +9,11 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
+import java.util.Locale;
 
 public class AutoController {
     private ElapsedTime runtime = new ElapsedTime();
@@ -68,6 +71,7 @@ public class AutoController {
     private DcMotor leftIntake;
     private DcMotor rightIntake;
     private DistanceSensor intakeSensor;
+    private ColorSensor intakeSensorC;
 
     private Servo leftHook;
     private Servo rightHook;
@@ -120,11 +124,21 @@ public class AutoController {
         rightHook.setDirection(Servo.Direction.REVERSE);
 
         intakeSensor = opmode.hardwareMap.get(DistanceSensor.class, "intake_sensor");
+        intakeSensorC = opmode.hardwareMap.get(ColorSensor.class, "intake_sensor");
 
         quarryDistSensorL = opmode.hardwareMap.get(DistanceSensor.class, "quarry_sensor_l");
         quarryDistSensorR = opmode.hardwareMap.get(DistanceSensor.class, "quarry_sensor_r");
         quarryColorSensorL = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_l");
         quarryColorSensorR = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_r");
+
+        opmode.telemetry.addLine().addData("Sensor: ", new Func<String>() {
+            @Override
+            public String value() {
+                return String.format(Locale.getDefault(), "dist: %.3f, r: %d, g: %d, b: %d, a: %d",
+                        intakeSensor.getDistance(DistanceUnit.INCH), intakeSensorC.red(),
+                        intakeSensorC.green(), intakeSensorC.blue(), intakeSensorC.alpha());
+            }
+        });
     }
 
     public void pidDrive(double x, double y, double theta, double tolerance, double tTolerance,
@@ -325,13 +339,28 @@ public class AutoController {
     public void intakeStone(final double strafe, final double drive, final double turn, final double pow,
                             final double timeout) {
         double startTime = runtime.seconds();
+        driveController.powerMotors(strafe, drive, turn);
+        setIntakePow(pow);
         while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
                !(intakeSensor.getDistance(DistanceUnit.CM) <= 6)) {
-            driveController.powerMotors(strafe, drive, turn);
-            setIntakePow(pow);
+            waitFor(10);
+        }
+        double newStartTime = runtime.seconds();
+        double newTimeout = newStartTime - startTime;
+        driveController.powerMotors(-strafe, -drive, -turn);
+        setIntakePow(0);
+        while (opmode.opModeIsActive() && runtime.seconds() - newStartTime < newTimeout) {
+            waitFor(10);
         }
         driveController.powerMotors(0, 0, 0);
-        setIntakePow(0);
+    }
+
+    public void waitFor(long m) {
+        try {
+            Thread.sleep(m);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void setCurTime() {

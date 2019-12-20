@@ -26,7 +26,7 @@ public class OdometryThread extends Thread {
         while(run) {
             posAndVel = odometry.getPosAndVel();
             try {
-                Thread.sleep(50);
+                Thread.sleep(15);
             } catch(InterruptedException e) {
                 e.printStackTrace();
             }

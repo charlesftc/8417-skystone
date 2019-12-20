@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.AutoController;
 
-@Disabled
 @Autonomous(name="FoundationAutoRed", group="Linear")
 public class FoundationAutoRed extends LinearOpMode {
     AutoController autoController;
