@@ -1,11 +1,13 @@
 package org.firstinspires.ftc.teamcode.Autos;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.AutoController;
 
-@Autonomous(name="ParkAuto", group="Linear")
+@Disabled
+@Autonomous(name="SensorTest", group="Linear")
 public class SensorTest extends LinearOpMode {
     AutoController autoController;
 
