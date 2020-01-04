@@ -107,8 +107,8 @@ public class AutoController {
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
-        opmode.telemetry.addData("Status", "Ready to start!");
-        opmode.telemetry.update();
+        /*opmode.telemetry.addData("Status", "Ready to start!");
+        opmode.telemetry.update();*/
         driveController = new DriveController(opmode, leftFront, rightFront, leftRear, rightRear,
                 odometryThread);
         startOdometry();
@@ -131,14 +131,14 @@ public class AutoController {
         quarryColorSensorL = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_l");
         quarryColorSensorR = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_r");
 
-        opmode.telemetry.addLine().addData("Sensor: ", new Func<String>() {
+        /*opmode.telemetry.addLine().addData("Sensor: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "dist: %.3f, r: %d, g: %d, b: %d, a: %d",
                         intakeSensor.getDistance(DistanceUnit.INCH), intakeSensorC.red(),
                         intakeSensorC.green(), intakeSensorC.blue(), intakeSensorC.alpha());
             }
-        });
+        });*/
     }
 
     public void pidDrive(double x, double y, double theta, double tolerance, double tTolerance,
