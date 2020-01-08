@@ -1,16 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-import org.firstinspires.ftc.robotcore.external.Func;
-
-import java.util.Arrays;
-import java.util.Locale;
-
-@TeleOp(name="PIDTEest", group="Linear Opmode")
+@Disabled
+@TeleOp(name="PIDTest", group="Linear Opmode")
 public class PIDTest extends LinearOpMode {
     private OdometryThread odometryThread;
     private DriveController driveController;
@@ -72,7 +69,7 @@ public class PIDTest extends LinearOpMode {
             double drive = -gamepad1.left_stick_y;
             double strafe = gamepad1.left_stick_x;
             double turn = -gamepad1.right_stick_x;
-            driveController.velDrive(strafe, drive, turn);
+            driveController.velDriveOLD(strafe, drive, turn);
         }
         odometryThread.end();
     }

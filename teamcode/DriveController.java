@@ -47,7 +47,7 @@ public class DriveController {
         odometryThread = odomThread;
     }
 
-    public void velDrive(double xVelSP, double yVelSP, double tVelSP) {
+    public void velDriveOLD(double xVelSP, double yVelSP, double tVelSP) {
         setCurTime();
         double elapsedTime = curTime - prevTime;
         setPrevTime();

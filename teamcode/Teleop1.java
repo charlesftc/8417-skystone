@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
@@ -16,38 +17,31 @@ import java.util.Locale;
 
 @TeleOp(name="Teleop1", group="Linear Opmode")
 public class Teleop1 extends LinearOpMode {
-    /*private OdometryThread odometryThread;
-    private double posAndVel[];*/
+    private OdometryThread odometryThread;
+    private double posAndVel[];
     private DcMotor leftFront;
     private DcMotor rightFront;
     private DcMotor leftRear;
     private DcMotor rightRear;
-    /*private DcMotor leftOdom;
+    private DcMotor leftOdom;
     private DcMotor rightOdom;
-    private DcMotor horizontalOdom;*/
+    private DcMotor horizontalOdom;
 
-    private Servo leftIntakeLift;
-    private Servo rightIntakeLift;
-    private DcMotor leftIntake;
-    private DcMotor rightIntake;
-    private DistanceSensor intakeSensor;
-
-    private boolean intakeStopped = false;
+    private CRServo leftIntake1;
+    private CRServo leftIntake2;
+    private CRServo rightIntake1;
+    private CRServo rightIntake2;
 
     private Servo leftHook;
     private Servo rightHook;
-    private Servo capstoneArm;
-    private Servo capstoneServo;
 
     private double driveSpeed = 1;
     private double strafeSpeed = 2;
-    private double intakePow = 1;
-    private double maxDispensePow = 0.3;
+    private double intakePow = 0.71;
+    private double dispensePow = 0.71;
 
     private boolean prevA;
     private boolean prevB;
-    private boolean prevRightBumper;
-    private boolean prevHasStone;
 
     @Override
     public void runOpMode() {
@@ -55,9 +49,11 @@ public class Teleop1 extends LinearOpMode {
         rightFront = hardwareMap.get(DcMotor.class, "right_front");
         leftRear = hardwareMap.get(DcMotor.class, "left_rear");
         rightRear = hardwareMap.get(DcMotor.class, "right_rear");
-        /*leftOdom = hardwareMap.get(DcMotor.class, "left_intake");
-        rightOdom = hardwareMap.get(DcMotor.class, "right_intake");
-        horizontalOdom = hardwareMap.get(DcMotor.class, "horizontal_odom");*/
+
+        leftOdom = hardwareMap.get(DcMotor.class, "lift_motor_1");
+        rightOdom = hardwareMap.get(DcMotor.class, "lift_motor_2");
+        horizontalOdom = hardwareMap.get(DcMotor.class, "belt_bar_motor");
+
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
         leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -69,36 +65,32 @@ public class Teleop1 extends LinearOpMode {
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        /*leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);*/
+        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        leftIntakeLift = hardwareMap.get(Servo.class, "left_intake_lift");
-        rightIntakeLift = hardwareMap.get(Servo.class, "right_intake_lift");
-        leftIntake = hardwareMap.get(DcMotor.class, "left_intake");
-        rightIntake = hardwareMap.get(DcMotor.class, "right_intake");
-        leftIntakeLift.setDirection(Servo.Direction.REVERSE);
+        leftIntake1 = hardwareMap.get(CRServo.class, "left_intake_1");
+        leftIntake2 = hardwareMap.get(CRServo.class, "left_intake_2");
+        rightIntake1 = hardwareMap.get(CRServo.class, "right_intake_1");
+        rightIntake2 = hardwareMap.get(CRServo.class, "right_intake_2");
 
         leftHook = hardwareMap.get(Servo.class, "left_hook");
         rightHook = hardwareMap.get(Servo.class, "right_hook");
         rightHook.setDirection(Servo.Direction.REVERSE);
 
-        capstoneArm = hardwareMap.get(Servo.class, "capstone_arm");
-        capstoneServo = hardwareMap.get(Servo.class, "capstone_servo");
-
-        /*leftIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightIntake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightIntake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);*/
+        leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        intakeSensor = hardwareMap.get(DistanceSensor.class, "intake_sensor");
-
-        /*odometryThread = new OdometryThread(this, leftIntake, rightIntake, horizontalOdom);
+        odometryThread = new OdometryThread(this, leftOdom, rightOdom, horizontalOdom);
+        telemetry.addData("Status", "Ready to start!");
+        telemetry.update();
         telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
@@ -108,24 +100,24 @@ public class Teleop1 extends LinearOpMode {
                         posAndVel[3], posAndVel[4], posAndVel[5]);
             }
         });
-        telemetry.addLine().addData("Lifts: ", new Func<String>() {
+        telemetry.addLine().addData("Drive pows: ", new Func<String>() {
             @Override
             public String value() {
-                return String.format(Locale.getDefault(), "left: %.3f, right: %.3f",
-                        leftIntakeLift.getPosition(), rightIntakeLift.getPosition());
+                return String.format(Locale.getDefault(), "lf: %.3f, rf: %.3f, lr: %.3f, rr: %.3f",
+                        leftFront.getPower(), rightFront.getPower(), leftRear.getPower(), rightRear.getPower());
             }
-        });*/
-        //odometryThread.start();
+        });
+
+        odometryThread.start();
         waitForStart();
         while (opModeIsActive()) {
+            posAndVel = odometryThread.getPosAndVel();
             updateDriving(gamepad1);
             updateIntake(gamepad1);
-            updateLifts(gamepad1);
             updateHooks(gamepad1);
-            updateCapstone(gamepad1);
-            //telemetry.update();
+            telemetry.update();
         }
-        //odometryThread.end();
+        odometryThread.end();
     }
 
     private void updateDriving(Gamepad gpad) {
@@ -158,50 +150,27 @@ public class Teleop1 extends LinearOpMode {
     }
 
     private void updateIntake(Gamepad gpad) {
-        //test to see if the right bumper is being held down
-        boolean rightBumper = gpad.right_bumper;
-        //test to see if there is a stone in the intake
-        boolean hasStone = intakeSensor.getDistance(DistanceUnit.CM) <= 6;
-        if (rightBumper) {
-            if (!prevRightBumper) {     //if the right bumper has been re-pressed, make sure the
-                intakeStopped = false;  //intake is not in auto-termination mode
-            } else if (!prevHasStone && hasStone) { //otherwise, if a stone was just collected,
-                intakeStopped = true;               //enter auto-termination mode
-            }
-            if (!intakeStopped) {                //if the intake is not in auto-termination mode,
-                leftIntake.setPower(-intakePow); //command the motors to intake
-                rightIntake.setPower(intakePow);
-            } else { //otherwise, stop the motors
-                leftIntake.setPower(0);
-                rightIntake.setPower(0);
-            }
-        } else if (gpad.left_trigger > 0.05) {                             //if the left trigger is
-            leftIntake.setPower(maxDispensePow * gamepad1.left_trigger);   //being pressed, command
-            rightIntake.setPower(-maxDispensePow * gamepad1.left_trigger); //the motors to dispense
-        } else { //otherwise, stop the motors
-            leftIntake.setPower(0);
-            rightIntake.setPower(0);
-        }
-        prevRightBumper = rightBumper; //update global variables for the next iteration
-        prevHasStone = hasStone;
-    }
-
-    private void updateLifts(Gamepad gpad) {
-        if (gpad.right_trigger > 0.2) {
-            leftIntakeLift.setPosition(0.5);
-            rightIntakeLift.setPosition(0.5);
-        } else if (gpad.x) {
-            leftIntakeLift.setPosition(0.6);
-            rightIntakeLift.setPosition(0.6);
+        if (gpad.right_bumper) {
+            leftIntake1.setPower(-intakePow);
+            leftIntake2.setPower(-intakePow);
+            rightIntake1.setPower(intakePow);
+            rightIntake2.setPower(intakePow);
+        } else if (gpad.left_trigger > 0.2) {
+            leftIntake1.setPower(dispensePow);
+            leftIntake2.setPower(dispensePow);
+            rightIntake1.setPower(-dispensePow);
+            rightIntake2.setPower(-dispensePow);
         } else {
-            leftIntakeLift.setPosition(0.26);
-            rightIntakeLift.setPosition(0.26);
+            leftIntake1.setPower(0);
+            leftIntake2.setPower(0);
+            rightIntake1.setPower(0);
+            rightIntake2.setPower(0);
         }
     }
 
     private void updateHooks(Gamepad gpad) {
-        boolean a = gamepad1.a;
-        boolean b = gamepad1.b;
+        boolean a = gpad.a;
+        boolean b = gpad.b;
         if (!a && prevA) {
             leftHook.setPosition(0);
             rightHook.setPosition(0);
@@ -211,18 +180,5 @@ public class Teleop1 extends LinearOpMode {
         }
         prevA = a;
         prevB = b;
-    }
-
-    private void updateCapstone(Gamepad gpad) {
-        if (gpad.dpad_right) {
-            capstoneArm.setPosition(1);
-        } else if (gpad.dpad_left) {
-            capstoneArm.setPosition(0);
-        }
-        if (gpad.dpad_down) {
-            capstoneServo.setPosition(1);
-        } else if (gpad.dpad_up) {
-            capstoneServo.setPosition(0);
-        }
     }
 }

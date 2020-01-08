@@ -123,7 +123,7 @@ public class Odometry {
     }
 
     private double getDeltaH() {
-        int ticks = horizontal.getCurrentPosition();
+        int ticks = -horizontal.getCurrentPosition();
         int delta = ticks - prevH;
         prevH = ticks;
         return delta * inchesPerTickH; //translates distance from encoder ticks to inches

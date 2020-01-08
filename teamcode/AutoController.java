@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -13,6 +14,7 @@ import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+import java.util.Arrays;
 import java.util.Locale;
 
 public class AutoController {
@@ -66,20 +68,13 @@ public class AutoController {
     double yVel;
     double tVel;
 
-    private Servo leftIntakeLift;
-    private Servo rightIntakeLift;
-    private DcMotor leftIntake;
-    private DcMotor rightIntake;
-    private DistanceSensor intakeSensor;
-    private ColorSensor intakeSensorC;
+    private CRServo leftIntake1;
+    private CRServo leftIntake2;
+    private CRServo rightIntake1;
+    private CRServo rightIntake2;
 
     private Servo leftHook;
     private Servo rightHook;
-
-    private DistanceSensor quarryDistSensorL;
-    private DistanceSensor quarryDistSensorR;
-    private ColorSensor quarryColorSensorL;
-    private ColorSensor quarryColorSensorR;
 
     public AutoController(LinearOpMode op) {
         opmode = op;
@@ -87,9 +82,11 @@ public class AutoController {
         rightFront = opmode.hardwareMap.get(DcMotor.class, "right_front");
         leftRear = opmode.hardwareMap.get(DcMotor.class, "left_rear");
         rightRear = opmode.hardwareMap.get(DcMotor.class, "right_rear");
-        leftOdom = opmode.hardwareMap.get(DcMotor.class, "left_intake");
-        rightOdom = opmode.hardwareMap.get(DcMotor.class, "right_intake");
-        horizontalOdom = opmode.hardwareMap.get(DcMotor.class, "horizontal_odom");
+
+        leftOdom = opmode.hardwareMap.get(DcMotor.class, "lift_motor_1");
+        rightOdom = opmode.hardwareMap.get(DcMotor.class, "lift_motor_2");
+        horizontalOdom = opmode.hardwareMap.get(DcMotor.class, "belt_bar_motor");
+
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
         leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -100,12 +97,14 @@ public class AutoController {
         leftRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
         leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
         odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
         /*opmode.telemetry.addData("Status", "Ready to start!");
         opmode.telemetry.update();*/
@@ -113,23 +112,14 @@ public class AutoController {
                 odometryThread);
         startOdometry();
 
-        leftIntakeLift = opmode.hardwareMap.get(Servo.class, "left_intake_lift");
-        rightIntakeLift = opmode.hardwareMap.get(Servo.class, "right_intake_lift");
-        leftIntake = opmode.hardwareMap.get(DcMotor.class, "left_intake");
-        rightIntake = opmode.hardwareMap.get(DcMotor.class, "right_intake");
-        leftIntakeLift.setDirection(Servo.Direction.REVERSE);
+        leftIntake1 = opmode.hardwareMap.get(CRServo.class, "left_intake_1");
+        leftIntake2 = opmode.hardwareMap.get(CRServo.class, "left_intake_2");
+        rightIntake1 = opmode.hardwareMap.get(CRServo.class, "right_intake_1");
+        rightIntake2 = opmode.hardwareMap.get(CRServo.class, "right_intake_2");
 
         leftHook = opmode.hardwareMap.get(Servo.class, "left_hook");
         rightHook = opmode.hardwareMap.get(Servo.class, "right_hook");
         rightHook.setDirection(Servo.Direction.REVERSE);
-
-        intakeSensor = opmode.hardwareMap.get(DistanceSensor.class, "intake_sensor");
-        intakeSensorC = opmode.hardwareMap.get(ColorSensor.class, "intake_sensor");
-
-        quarryDistSensorL = opmode.hardwareMap.get(DistanceSensor.class, "quarry_sensor_l");
-        quarryDistSensorR = opmode.hardwareMap.get(DistanceSensor.class, "quarry_sensor_r");
-        quarryColorSensorL = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_l");
-        quarryColorSensorR = opmode.hardwareMap.get(ColorSensor.class, "quarry_sensor_r");
 
         /*opmode.telemetry.addLine().addData("Sensor: ", new Func<String>() {
             @Override
@@ -151,6 +141,7 @@ public class AutoController {
             setCurTime();
             double elapsedTime = curTime - prevTime; //the time elapsed since the previous iteration
             setPrevTime();                           //is calculated
+            //theta = theta * (Math.PI/ 180); //convert heading from degrees to radians
             //current x, y and theta positions and velocities are gotten
             posAndVel = odometryThread.getPosAndVel();
             double worldErrorX = x - posAndVel[0]; //x and y world errors are calculated
@@ -225,10 +216,10 @@ public class AutoController {
                 tVel = (errorTheta * thetaKP) + tErrorSum + dErrorT;
             }
             //output the x, y and theta velocity setpoints to stage 2
-            driveController.velDrive(xVel, yVel, tVel);
+            velDrive(xVel, yVel, tVel);
         } while (opmode.opModeIsActive());
         //after terminating the loop, stop the motors
-        driveController.powerMotors(0, 0, 0);
+        velDrive(0, 0, 0);
     }
 
     public void pidDrive(double x, double y, double theta, double timeout) {
@@ -260,35 +251,33 @@ public class AutoController {
         drive(strafe, drive, turn, timeout, true);
     }
 
-    public void findSkystone(int driveDir, double pow, double turnPow, double gapDist, double threshold, double turnThreshold, double timeout) {
-        double drive = 0;
-        double strafe = 0;
-        double turn = 0;
-        double startTime = runtime.seconds();
-        while (opmode.opModeIsActive()) {
-            setCurTime();
-            boolean skystoneLeft = quarryColorSensorL.alpha() < 20;
-            boolean skystoneRight = quarryColorSensorR.alpha() < 20;
-            double distLeft = quarryDistSensorL.getDistance(DistanceUnit.INCH);
-            double distRight = quarryDistSensorR.getDistance(DistanceUnit.INCH);
-            /*if (skystoneLeft && skystoneRight) {
-                pidDrive = 0;
-            } else if (skystoneLeft) {
-                pidDrive = pow;
-            } else if (skystoneRight) {
-                pidDrive = -pow;
-            } else {
-                pidDrive = pow * driveDir;
-            }*/
-            //strafe = Range.clip(((distLeft + distRight) / 2) - gapDist, -pow, pow);
-            //turn = Range.clip(distRight - distLeft, -turnPow, turnPow);
-            /*if ((pidDrive < threshold && strafe < threshold && turn < turnThreshold) || curTime - startTime > threshold) {
-                break;
-            }*/
-            driveController.powerMotors(strafe, drive, turn);
-            opmode.telemetry.update();
+    public void velDrive(double strafeVel, double driveVel, double turnVel) {
+        /*driveVel = 0;
+        strafeVel = 0;*/
+        //turnVel = 0;
+        double leftFrontVel = -driveVel - strafeVel + turnVel;
+        double rightFrontVel = -driveVel + strafeVel - turnVel;
+        double leftRearVel = -driveVel + strafeVel + turnVel;
+        double rightRearVel = -driveVel - strafeVel - turnVel;
+        double[] vels = {Math.abs(leftFrontVel), Math.abs(rightFrontVel), Math.abs(leftRearVel), Math.abs(rightRearVel)};
+        Arrays.sort(vels);
+        if (vels[3] > 1) {
+            leftFrontVel /= vels[3];
+            rightFrontVel /= vels[3];
+            leftRearVel /= vels[3];
+            rightRearVel /= vels[3];
         }
-        driveController.powerMotors(0, 0, 0);
+        leftFront.setPower(leftFrontVel);
+        rightFront.setPower(rightFrontVel);
+        leftRear.setPower(leftRearVel);
+        rightRear.setPower(rightRearVel);
+    }
+
+    public void setMotorsMode(DcMotor.RunMode mode) {
+        leftFront.setMode(mode);
+        leftRear.setMode(mode);
+        rightFront.setMode(mode);
+        leftRear.setMode(mode);
     }
 
     public void startOdometry() {
@@ -300,13 +289,10 @@ public class AutoController {
     }
 
     public void setIntakePow(double pow) {
-        leftIntake.setPower(-pow);
-        rightIntake.setPower(pow);
-    }
-
-    public void setIntakeLiftPos(double pos) {
-        leftIntakeLift.setPosition(pos);
-        rightIntakeLift.setPosition(pos);
+        leftIntake1.setPower(pow);
+        leftIntake2.setPower(pow);
+        rightIntake1.setPower(pow);
+        rightIntake2.setPower(pow);
     }
 
     public void setHookPos(double pos) {
@@ -314,7 +300,7 @@ public class AutoController {
         rightHook.setPosition(pos);
     }
 
-    public void intakeStoneOLD(final double pow, final double timeout) {
+    /*public void intakeStoneOLD(final double pow, final double timeout) {
         //runs on a separate thread so other commands (driving, etc.) can happen concurrently
         Thread intakeThread = new Thread() {
             public void run() {
@@ -339,7 +325,7 @@ public class AutoController {
     public void intakeStone(final double strafe, final double drive, final double turn, final double pow,
                             final double timeout) {
         double startTime = runtime.seconds();
-        driveController.powerMotors(strafe, drive, turn);
+        driveController.velDrive(strafe, drive, turn);
         setIntakePow(pow);
         while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
                !(intakeSensor.getDistance(DistanceUnit.CM) <= 6)) {
@@ -347,13 +333,13 @@ public class AutoController {
         }
         double newStartTime = runtime.seconds();
         double newTimeout = newStartTime - startTime;
-        driveController.powerMotors(-strafe, -drive, -turn);
+        driveController.velDrive(-strafe, -drive, -turn);
         setIntakePow(0);
         while (opmode.opModeIsActive() && runtime.seconds() - newStartTime < newTimeout) {
             waitFor(10);
         }
-        driveController.powerMotors(0, 0, 0);
-    }
+        driveController.velDrive(0, 0, 0);
+    }*/
 
     public void waitFor(long m) {
         try {

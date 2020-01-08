@@ -17,8 +17,8 @@ public class OdometryThread extends Thread {
         left = l;
         right = r;
         horizontal = h;
-        odometry = new Odometry(opmode, left, right, horizontal, 2400, 0.97 * 1.0264, 0.005,
-                11.5 * 1.0152, 1.11, 0, 0, Math.PI / 2, 0, 0,
+        odometry = new Odometry(opmode, left, right, horizontal, 2400, 0.97 * 1.0264, 0.000,
+                12.3622, -1.5354, 0, 0, Math.PI / 2, 0, 0,
                 0, 35, 2.5); //OLD: maxVel = 54, maxTurVel = 6.28;
     }
 
