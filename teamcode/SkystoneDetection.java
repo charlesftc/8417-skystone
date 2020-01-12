@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -8,46 +10,60 @@ import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
-import org.openftc.easyopencv.OpenCvInternalCamera;
 import org.openftc.easyopencv.OpenCvPipeline;
 
 public class SkystoneDetection {
     LinearOpMode opmode;
-    OpenCvCamera phoneCam;
-    private int width = 480;
-    private int height = 640;
+    OpenCvCamera usbCam;
+    private int width = 640;
+    private int height = 480;
 
-    private Rect leftRect = new Rect(101, 200, 25, 150);
-    private Rect centerRect = new Rect(227, 200, 25, 150);
-    private Rect rightRect = new Rect(353, 200, 25, 150);
-    private Rect[] rects = {leftRect, centerRect, rightRect};
+    private Rect leftRect;
+    private Rect centerRect;
+    private Rect rightRect;
+    private Rect[] rects = new Rect[3];
 
     private int leftVal = -1;
     private int centerVal = -1;
     private int rightVal = -1;
 
-    public SkystoneDetection(LinearOpMode op) {
+    public SkystoneDetection(LinearOpMode op, boolean isRed) {
         opmode = op;
+        if (isRed) {
+            /*leftRect = new Rect(75, 20, 25, 170);
+            centerRect = new Rect(307, 20, 25, 170);
+            rightRect = new Rect(540, 20, 25, 170);*/
+            leftRect = new Rect(25, 20, 25, 170);
+            centerRect = new Rect(257, 20, 25, 170);
+            rightRect = new Rect(490, 20, 25, 170);
+        } else {
+            leftRect = new Rect(125, 20, 25, 170);
+            centerRect = new Rect(357, 20, 25, 170);
+            rightRect = new Rect(590, 20, 25, 170);
+        }
+        rects[0] = leftRect;
+        rects[1] = centerRect;
+        rects[2] = rightRect;
     }
 
     public void initialize() {
         int cameraMonitorViewId = opmode.hardwareMap.appContext.getResources().
             getIdentifier("cameraMonitorViewId", "id",
             opmode.hardwareMap.appContext.getPackageName());
-        phoneCam = OpenCvCameraFactory.getInstance().createInternalCamera(OpenCvInternalCamera.
-            CameraDirection.BACK, cameraMonitorViewId);
-        //phoneCam = OpenCvCameraFactory.getInstance().createInternalCamera(OpenCvInternalCamera.
-        //  CameraDirection.BACK);
-        phoneCam.openCameraDevice();
-        phoneCam.setPipeline(new SkystonePipeline());
+        /*phoneCam = OpenCvCameraFactory.getInstance().createInternalCamera(OpenCvInternalCamera.
+            CameraDirection.BACK, cameraMonitorViewId);*/
+        usbCam = OpenCvCameraFactory.getInstance().createWebcam(opmode.hardwareMap.get(
+                WebcamName.class, "usb_cam"), cameraMonitorViewId);
+        usbCam.openCameraDevice();
+        usbCam.setPipeline(new SkystonePipeline());
     }
 
     public void startStream() {
-        phoneCam.startStreaming(height, width, OpenCvCameraRotation.UPRIGHT);
+        usbCam.startStreaming(width, height, OpenCvCameraRotation.UPRIGHT);
     }
 
     public void stopStream() {
-        phoneCam.stopStreaming();
+        usbCam.stopStreaming();
         //webcam.closeCameraDevice();
     }
 

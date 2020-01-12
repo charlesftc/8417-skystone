@@ -1,18 +1,16 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -27,29 +25,55 @@ public class AutoController {
     private double posAndVel[];
 
     private DriveController driveController;
+
     private DcMotor leftFront;
     private DcMotor rightFront;
     private DcMotor leftRear;
     private DcMotor rightRear;
+
     private DcMotor leftOdom;
     private DcMotor rightOdom;
     private DcMotor horizontalOdom;
 
-    private double kP = 0.6;
-    private double thetaKP = 0.6;
+    private DcMotor liftMotor0;
+    private DcMotor liftMotor1;
+    private DcMotor liftMotor2;
+
+    private DcMotor beltBarMotor;
+    private AnalogInput beltBarPot;
+
+    private Servo wristServo;
+    private Servo dispenserServo;
+
+    private CRServo leftIntake1;
+    private CRServo leftIntake2;
+    private CRServo rightIntake1;
+    private CRServo rightIntake2;
+
+    private Servo leftClaw1;
+    private Servo leftClaw2;
+    private Servo rightClaw1;
+    private Servo rightClaw2;
+
+    private Servo leftHook;
+    private Servo rightHook;
+
+    private double yKP = 0.6;
+    private double xKP = 0.7;
+    private double thetaKP = 0.65;
 
     private double xErrorSum = 0;
     private double yErrorSum = 0;
     private double tErrorSum = 0;
-    private double maxErrorSum = 0.4;
-    private double maxTErrorSum = 0.45;
-    private double kI = 0.5;
-    private double thetaKI = 0.7;
+    private double maxErrorSum = 0.45;
+    private double maxTErrorSum = 0.25;
+    private double kI = 0.0005;
+    private double thetaKI = 0.0006;
 
-    private double kD = 0.002;
-    private double thetaKD = 0.0025;
-    private double maxDError = 0.2;
-    private double maxDErrorT = 0.2;
+    private double kD = 0.00001;
+    private double thetaKD = 0.0001;
+    private double maxDError = 0.15;
+    private double maxDErrorT = 0.15;
     private double prevErrorX = 0;
     private double prevErrorY = 0;
     private double prevErrorT = 0;
@@ -58,46 +82,37 @@ public class AutoController {
     private double defToleranceT = 0.3;
     private double defaultTimeout = 3;
 
-    private double brakingDist = 5;
+    private double brakingDist = 7;
     private double turnBrakingDist = 0.5;
 
-    private double velThreshold = 0.3;
-    private double turnVelThreshold = 0.2;
+    private double velThreshold = 0.4;
+    private double turnVelThreshold = 0.3;
 
     double xVel;
     double yVel;
     double tVel;
 
-    private CRServo leftIntake1;
-    private CRServo leftIntake2;
-    private CRServo rightIntake1;
-    private CRServo rightIntake2;
-
-    private Servo leftHook;
-    private Servo rightHook;
-
     public AutoController(LinearOpMode op) {
         opmode = op;
+
         leftFront = opmode.hardwareMap.get(DcMotor.class, "left_front");
         rightFront = opmode.hardwareMap.get(DcMotor.class, "right_front");
         leftRear = opmode.hardwareMap.get(DcMotor.class, "left_rear");
         rightRear = opmode.hardwareMap.get(DcMotor.class, "right_rear");
+        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightRear.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        leftRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         leftOdom = opmode.hardwareMap.get(DcMotor.class, "lift_motor_1");
         rightOdom = opmode.hardwareMap.get(DcMotor.class, "lift_motor_2");
         horizontalOdom = opmode.hardwareMap.get(DcMotor.class, "belt_bar_motor");
-
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightRear.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        leftRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
         leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -105,30 +120,54 @@ public class AutoController {
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
-        /*opmode.telemetry.addData("Status", "Ready to start!");
-        opmode.telemetry.update();*/
-        driveController = new DriveController(opmode, leftFront, rightFront, leftRear, rightRear,
-                odometryThread);
-        startOdometry();
+        liftMotor0 = opmode.hardwareMap.get(DcMotor.class, "lift_motor_0");
+        liftMotor1 = opmode.hardwareMap.get(DcMotor.class, "lift_motor_1");
+        liftMotor2 = opmode.hardwareMap.get(DcMotor.class, "lift_motor_2");
+        liftMotor0.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        liftMotor1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        liftMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        liftMotor0.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        liftMotor1.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        beltBarMotor = opmode.hardwareMap.get(DcMotor.class, "belt_bar_motor");
+        beltBarMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        beltBarPot = opmode.hardwareMap.get(AnalogInput.class, "belt_bar_pot");
+
+        wristServo = opmode.hardwareMap.get(Servo.class, "wrist_servo");
+        dispenserServo = opmode.hardwareMap.get(Servo.class, "dispenser_servo");
 
         leftIntake1 = opmode.hardwareMap.get(CRServo.class, "left_intake_1");
         leftIntake2 = opmode.hardwareMap.get(CRServo.class, "left_intake_2");
         rightIntake1 = opmode.hardwareMap.get(CRServo.class, "right_intake_1");
         rightIntake2 = opmode.hardwareMap.get(CRServo.class, "right_intake_2");
 
+        leftClaw1 = opmode.hardwareMap.get(Servo.class, "left_claw_1");
+        leftClaw2 = opmode.hardwareMap.get(Servo.class, "left_claw_2");
+        rightClaw1 = opmode.hardwareMap.get(Servo.class, "right_claw_1");
+        rightClaw2 = opmode.hardwareMap.get(Servo.class, "right_claw_2");
+        leftClaw1.setDirection(Servo.Direction.REVERSE);
+        rightClaw2.setDirection(Servo.Direction.REVERSE);
+
         leftHook = opmode.hardwareMap.get(Servo.class, "left_hook");
         rightHook = opmode.hardwareMap.get(Servo.class, "right_hook");
-        rightHook.setDirection(Servo.Direction.REVERSE);
+        leftHook.setDirection(Servo.Direction.REVERSE);
 
-        /*opmode.telemetry.addLine().addData("Sensor: ", new Func<String>() {
+        odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
+        opmode.telemetry.addData("Status", "Ready to start!");
+        opmode.telemetry.update();
+        driveController = new DriveController(opmode, leftFront, rightFront, leftRear, rightRear,
+                odometryThread);
+        startOdometry();
+
+        opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
-                return String.format(Locale.getDefault(), "dist: %.3f, r: %d, g: %d, b: %d, a: %d",
-                        intakeSensor.getDistance(DistanceUnit.INCH), intakeSensorC.red(),
-                        intakeSensorC.green(), intakeSensorC.blue(), intakeSensorC.alpha());
+                return String.format(Locale.getDefault(), "x: %.3f, y: %.3f, theta: %.3f, " +
+                                "xVel: %.3f, yVel: %.3f, tVel: %.3f",
+                        posAndVel[0], posAndVel[1], posAndVel[2] * (180 / Math.PI),
+                        posAndVel[3], posAndVel[4], posAndVel[5]);
             }
-        });*/
+        });
     }
 
     public void pidDrive(double x, double y, double theta, double tolerance, double tTolerance,
@@ -141,7 +180,8 @@ public class AutoController {
             setCurTime();
             double elapsedTime = curTime - prevTime; //the time elapsed since the previous iteration
             setPrevTime();                           //is calculated
-            //theta = theta * (Math.PI/ 180); //convert heading from degrees to radians
+            /*theta = theta * (Math.PI / 180);           //convert heading and theta tolerance from
+            tTolerance = tTolerance * (Math.PI / 180); //degrees to radians*/
             //current x, y and theta positions and velocities are gotten
             posAndVel = odometryThread.getPosAndVel();
             double worldErrorX = x - posAndVel[0]; //x and y world errors are calculated
@@ -193,7 +233,7 @@ public class AutoController {
             if (Math.abs(errorX) < 1 && Math.abs(posAndVel[3]) > velThreshold) {
                 xVel = 0;
             } else {
-                xVel = (errorX * kP) + xErrorSum + dErrorX;
+                xVel = (errorX * xKP) + xErrorSum + dErrorX;
             }
 
             //if we are near the target x position and are traveling quickly, slam on the brakes in
@@ -203,7 +243,7 @@ public class AutoController {
             if (Math.abs(errorY) < 1 && Math.abs(posAndVel[4]) > velThreshold) {
                 yVel = 0;
             } else {
-                yVel = (errorY * kP) + yErrorSum + dErrorY;
+                yVel = (errorY * yKP) + yErrorSum + dErrorY;
             }
 
             //if we are near the target heading and are turning quickly, slam on the brakes in the
@@ -217,6 +257,7 @@ public class AutoController {
             }
             //output the x, y and theta velocity setpoints to stage 2
             velDrive(xVel, yVel, tVel);
+            opmode.telemetry.update();
         } while (opmode.opModeIsActive());
         //after terminating the loop, stop the motors
         velDrive(0, 0, 0);
@@ -293,6 +334,16 @@ public class AutoController {
         leftIntake2.setPower(pow);
         rightIntake1.setPower(pow);
         rightIntake2.setPower(pow);
+    }
+
+    public void setLeftClawPos(double pos1, double pos2) {
+        leftClaw1.setPosition(pos1);
+        leftClaw2.setPosition(pos2);
+    }
+
+    public void setRightClawPos(double pos1, double pos2) {
+        rightClaw1.setPosition(pos1);
+        rightClaw2.setPosition(pos2);
     }
 
     public void setHookPos(double pos) {
