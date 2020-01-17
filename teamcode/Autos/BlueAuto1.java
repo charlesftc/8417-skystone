@@ -73,6 +73,7 @@ public class BlueAuto1 extends LinearOpMode {
         autoController.setLeftClawPos(0.2, 1);
 
         autoController.pidDrive(28, -22, Math.PI, 1, 0.8, 30);
+        autoController.stopOdometry();
     }
 
     private void pickUpStone() {

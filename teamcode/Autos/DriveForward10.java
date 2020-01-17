@@ -17,5 +17,6 @@ public class DriveForward10 extends LinearOpMode {
         waitForStart();
         SkystoneDetection skystoneDetection;
         autoController.pidDrive(0, 10, Math.PI / 2, 0.2, 0.4, 2.5);
+        autoController.stopOdometry();
     }
 }

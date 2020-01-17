@@ -74,6 +74,7 @@ public class RedAuto1 extends LinearOpMode {
         //autoController.drive(0, 0.6, 0, 0.9, true);
 
         autoController.pidDrive(-38, -22, 0, 1, 0.8, 30);
+        autoController.stopOdometry();
     }
 
     private void pickUpStone() {
