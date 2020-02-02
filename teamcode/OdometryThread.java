@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.RobotLog;
 
 public class OdometryThread extends Thread {
     private LinearOpMode opmode;
@@ -17,16 +18,18 @@ public class OdometryThread extends Thread {
         left = l;
         right = r;
         horizontal = h;
-        odometry = new Odometry(opmode, left, right, horizontal, 2400, 0.97 * 1.0264, 0.085,
-                12.3622, -1.4354, 0, 0, Math.PI / 2, 0, 0, //old vert dist -1.5354
-                0, 35, 2.5); //OLD: maxVel = 54, maxTurVel = 6.28;
+        odometry = new Odometry(opmode, left, right, horizontal, 2400, 0.97 * 1.0264, 0.00035, //old bal -.00035
+            12.59, new double[ ] {6.75, 2.75}, 0.0178, 0, 0, Math.PI / 2, 0, 0, //old vert dist 2.75, old width 12.52, old SF -0.014
+                0);
     }
 
     public void run() {
         while(run) {
             posAndVel = odometry.getPosAndVel();
+            RobotLog.a("x: %.3f, y: %.3f, theta: %.3f, xVel: %.3f, yVel: %.3f, tVel: %.3f",
+                    posAndVel[0], posAndVel[1], posAndVel[2], posAndVel[3], posAndVel[4], posAndVel[5]);
             try {
-                Thread.sleep(15);
+                Thread.sleep(10);
             } catch(InterruptedException e) {
                 e.printStackTrace();
             }
