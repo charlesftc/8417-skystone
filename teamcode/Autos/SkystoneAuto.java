@@ -7,14 +7,14 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import org.firstinspires.ftc.teamcode.SkystoneDetection;
 
 @Disabled
-@Autonomous(name="DO_NOT_RUN", group="Linear")
+@Autonomous(name="OpenCVTest", group="Linear")
 public class SkystoneAuto extends LinearOpMode {
     SkystoneDetection skystoneDetection;
 
     @Override
     public void runOpMode() {
         skystoneDetection = new SkystoneDetection(this, false);
-        skystoneDetection.initialize();
+        skystoneDetection.initialize(true);
         skystoneDetection.startStream();
 
         waitForStart();
