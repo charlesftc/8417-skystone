@@ -226,22 +226,69 @@ public class AutoController {
 
     public void setIntakePow(double pow) {
         r.leftIntake.setPower(pow);
-        r.rightIntake.setPower(pow);
+        r.rightIntake.setPower(-pow);
     }
 
-    public void setLeftClawPos(double pos1, double pos2) {
-        r.leftClaw1.setPosition(pos1);
-        r.leftClaw2.setPosition(pos2);
+    public void deployIntake() {
+        Thread t = new Thread() {
+            public void run() {
+                double startTime = runtime.seconds();
+                r.leftIntake.setPower(0.4);
+                r.rightIntake.setPower(0.4);
+                while (opmode.opModeIsActive() && runtime.seconds() - startTime < 0.5) {
+                    waitFor(20);
+                }
+                r.leftIntake.setPower(0);
+                r.rightIntake.setPower(0);
+            }
+        };
+        t.start();
     }
 
-    public void setRightClawPos(double pos1, double pos2) {
-        r.rightClaw1.setPosition(pos1);
-        r.rightClaw2.setPosition(pos2);
+    public void intakeStone(double strafe, double drive, double turn, double pow, double timeout) {
+        double startTime = runtime.seconds();
+        //begin driving at the specified velocities and intaking at the specified power
+        powerMotors(strafe, drive, turn);
+        setIntakePow(pow);
+        //wait until the timeout has been reached or a stone has entered the intake
+        while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
+                Double.isNaN(r.intakeSensor.getDistance(DistanceUnit.CM))) {
+            waitFor(5);
+        }
+        //stop the intake
+        //setIntakePow(0);
+        double newStartTime = runtime.seconds();
+        double newTimeout = newStartTime - startTime;
+        //drive at the specified velocities in reverse (for the same duration) to end up near the
+        //starting location
+        powerMotors(-strafe, -drive, -turn);
+        while (opmode.opModeIsActive() && runtime.seconds() - newStartTime < newTimeout) {
+            waitFor(10);
+        }
+        //stop the drive motors
+        powerMotors(0, 0, 0);
+    }
+
+    public void setBeltBarPos(double pos) {
+        r.leftBeltBar.setPosition(pos);
+        r.rightBeltBar.setPosition(pos);
     }
 
     public void setHookPos(double pos) {
-        r.leftHook.setPosition(pos);
-        r.rightHook.setPosition(pos);
+        r.hook.setPosition(pos);
+    }
+
+    public void setLiftPos(final double pos) {
+        Thread t = new Thread() {
+            public void run() {
+                double errorPos;
+                do {
+                    errorPos = pos - r.getLiftPos();
+                    r.setLiftPow(errorPos * liftKP);
+                } while (opmode.opModeIsActive() && Math.abs(errorPos) > liftTolerance);
+            }
+        };
+        t.start();
     }
 
     public void waitFor(long m) {
