@@ -5,16 +5,18 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Func;
 
+import java.util.Arrays;
 import java.util.Locale;
 
-public class RobotHardware {
-    private LinearOpMode opmode;
-    
-    OdometryThread odometryThread;
+public class RobotControl {
+    LinearOpMode opmode;
+    public ElapsedTime runtime = new ElapsedTime(); //private??
+
+    public OdometryThread odometryThread;
     double posAndVel[];
 
     DcMotor leftFront;
@@ -26,17 +28,13 @@ public class RobotHardware {
     DcMotor rightOdom;
     DcMotor horizontalOdom;
 
-    DcMotor leftLift;
-    DcMotor rightLift;
-    private double liftTicksPerInch = 36.8;
-    private double maxLiftExtension = 35.25; //35.433 in reality
-    private double liftPowOffset = 0.25;
-    private double liftPowOffsetThreshold = 0.06;
+    Lift lift;
+    public BeltBar beltBar;
+    public AutoStacker autoStacker;
 
-    Servo leftBeltBar;
-    Servo rightBeltBar;
-
-    Servo dispenser;
+    Servo claw;
+    //public double[] clawPos = {0.69, 0.975};
+    public double[] clawPos = {0.08, 1}; //0.59
 
     DcMotor leftIntake;
     DcMotor rightIntake;
@@ -44,7 +42,7 @@ public class RobotHardware {
 
     Servo hook;
 
-    public RobotHardware(LinearOpMode op, boolean useOdometry) {
+    public RobotControl(LinearOpMode op, boolean useOdometry) {
         opmode = op;
 
         leftFront = opmode.hardwareMap.get(DcMotor.class, "left_front");
@@ -72,25 +70,16 @@ public class RobotHardware {
         rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        leftLift = opmode.hardwareMap.get(DcMotor.class, "left_lift"); //port 0
-        rightLift = opmode.hardwareMap.get(DcMotor.class, "right_lift"); //port 1
-        leftLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightLift.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        lift = new Lift(this);
+        beltBar = new BeltBar(this);
+        autoStacker = new AutoStacker(this);
 
-        leftBeltBar = opmode.hardwareMap.get(Servo.class, "left_belt_bar");
-        rightBeltBar = opmode.hardwareMap.get(Servo.class, "right_belt_bar");
-        leftBeltBar.setDirection(Servo.Direction.REVERSE);
-
-        dispenser = opmode.hardwareMap.get(Servo.class, "dispenser_servo");
+        claw = opmode.hardwareMap.get(Servo.class, "dispenser_servo"); //rename to claw_servo
 
         leftIntake = opmode.hardwareMap.get(DcMotor.class, "left_intake");
         rightIntake = opmode.hardwareMap.get(DcMotor.class, "right_intake");
         leftIntake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightIntake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        //rightIntake.setDirection(DcMotorSimple.Direction.REVERSE);
         intakeSensor = opmode.hardwareMap.get(DistanceSensor.class, "intake_sensor");
 
         hook = opmode.hardwareMap.get(Servo.class, "hook");
@@ -98,8 +87,6 @@ public class RobotHardware {
 
         if (useOdometry) {
             odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
-            opmode.telemetry.addData("Status", "Ready to start!");
-            opmode.telemetry.update();
             odometryThread.start();
             opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
                 @Override
@@ -113,37 +100,50 @@ public class RobotHardware {
         }
     }
 
-    public void setLiftPow(double pow) {
-        //read the current lift position
-        double pos = getLiftPos();
-        //if the lift is being commanded to extend past its limits, stop it
-        if (pos <= 0.025 && pow <= 0) {
-            pow = 0.15;
-        } else if(pos >= 1 && pow >= 0) {
-            pow = 0;
+    public void powerDriveMotors(double strafe, double drive, double turn) {
+        //robot-relative powers/velocities are translated into individual wheel values
+        double leftFrontVal = -drive - strafe + turn;
+        double rightFrontVal = -drive + strafe - turn;
+        double leftRearVal = -drive + strafe + turn;
+        double rightRearVal = -drive - strafe - turn;
+        //the values are scaled relative to each other such as to not exceed 1 or -1
+        double[] vals = {Math.abs(leftFrontVal), Math.abs(rightFrontVal), Math.abs(leftRearVal),
+                         Math.abs(rightRearVal)};
+        Arrays.sort(vals);
+        if (vals[3] > 1) {
+            leftFrontVal /= vals[3];
+            rightFrontVal /= vals[3];
+            leftRearVal /= vals[3];
+            rightRearVal /= vals[3];
         }
-        //adjust the power level to account for gravity by adding an amount to it proportional to
-        //the current extension
-        if (pos > liftPowOffsetThreshold) {
-            pow += liftPowOffset * Range.scale(pos, 0, 1, 0.5, 1);
-        }
-        //make sure the result does not exceed 1 or -1
-        pow = Range.clip(pow, -1, 1);
-        //command the slide motors with the specified power level
-        leftLift.setPower(pow);
-        rightLift.setPower(pow);
+        //the motors are commanded with their respective values
+        leftFront.setPower(leftFrontVal);
+        rightFront.setPower(rightFrontVal);
+        leftRear.setPower(leftRearVal);
+        rightRear.setPower(rightRearVal);
     }
 
     public double[] getPosAndVel() {
         return odometryThread.getPosAndVel();
     }
 
-    public double getLiftPos() {
-        double inches = leftLift.getCurrentPosition() / liftTicksPerInch;
-        return Range.scale(inches, 0, maxLiftExtension, 0, 1);
+    public void stopOdometry() {
+        odometryThread.end();
     }
 
-    public double getInches() {
-        return leftLift.getCurrentPosition() / liftTicksPerInch;
+    public void setHookPos(double pos) {
+        hook.setPosition(pos);
+    }
+
+    public void setClawPos(double pos) {
+        claw.setPosition(pos);
+    }
+
+    public void waitFor(long m) {
+        try {
+            Thread.sleep(m);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

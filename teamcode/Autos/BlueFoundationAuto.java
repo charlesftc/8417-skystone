@@ -1,30 +1,32 @@
 package org.firstinspires.ftc.teamcode.Autos;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-import org.firstinspires.ftc.teamcode.AutoController;
+import org.firstinspires.ftc.teamcode.AutoControl;
 
+@Disabled
 @Autonomous(name="BLUE-FoundationAuto", group="Linear")
 public class BlueFoundationAuto extends LinearOpMode {
-    AutoController autoController;
+    AutoControl a;
 
     @Override
     public void runOpMode() {
-        autoController = new AutoController(this);
+        a = new AutoControl(this);
 
         waitForStart();
 
-        autoController.pidDrive(18, -20, 90, 0.2, 2, 7, true);
-        autoController.powDrive(0, -0.3, 0, 0.8, true);
-        autoController.setHookPos(1);
+        a.pidDrive(18, -20, 90, 0.2, 2, 7, true);
+        a.powDrive(0, -0.3, 0, 0.8, true);
+        a.setHookPos(1);
         sleep(2500);
-        autoController.powDrive(0, 0.5, 0, 1.5, true);
-        autoController.setHookPos(0);
+        a.powDrive(0, 0.5, 0, 1.5, true);
+        a.setHookPos(0);
         sleep(2500);
-        autoController.powDrive(-0.2, -0.35, 0, 0.2, true);
-        //autoController.pidDrive(-32, -1, 90, 0.2, 2, 30, true);
-        //autoController.powDrive(0, 0.25, 0, 0.5, true);
-        autoController.pidDrive(-32, -4, 90, 0.2, 2, 30, true);
+        a.powDrive(-0.2, -0.35, 0, 0.2, true);
+        //a.pidDrive(-32, -1, 90, 0.2, 2, 30, true);
+        //a.powDrive(0, 0.25, 0, 0.5, true);
+        a.pidDrive(-32, -4, 90, 0.2, 2, 30, true);
     }
 }

@@ -2,20 +2,15 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
-import java.util.Arrays;
+import java.util.Locale;
 
-public class AutoController {
-    private LinearOpMode opmode;
-    private RobotHardware r;
-
-    private ElapsedTime runtime = new ElapsedTime();
-    private double curTime = 0;
+public class AutoControl extends RobotControl {
     private double prevTime = 0;
 
     private double xKP = 0.09;
@@ -56,12 +51,22 @@ public class AutoController {
     double yVel;
     double tVel;
 
-    private double liftKP = 2;
-    private double liftTolerance = 0.05;
-
-    public AutoController(LinearOpMode op) {
+    public AutoControl(LinearOpMode op) {
+        super(op, true);
         opmode = op;
-        r = new RobotHardware(opmode, true);
+        //setDriveMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER); //should i have this?
+        /*opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
+            @Override
+            public String value() {
+                return String.format(Locale.getDefault(), "pos: %.3f", lift.getPos());
+            }
+        });*/
+        opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
+            @Override
+            public String value() {
+                return String.format(Locale.getDefault(), "sensor: %.3f", intakeSensor.getDistance(DistanceUnit.CM));
+            }
+        });
     }
 
     public void pidDrive(double x, double y, double theta, double tolerance, double tTolerance,
@@ -73,20 +78,20 @@ public class AutoController {
         theta = Math.toRadians(theta);           //convert heading and theta tolerance from degrees
         tTolerance = Math.toRadians(tTolerance); //to radians
         do {
-            setCurTime();
+            double curTime = runtime.seconds();
             double elapsedTime = curTime - prevTime; //the time elapsed since the previous iteration
-            setPrevTime();                           //is calculated
-            //current x, y and theta positions and velocities are gotten
-            r.posAndVel = r.odometryThread.getPosAndVel();
-            double worldErrorX = x - r.posAndVel[0]; //x and y world errors are calculated
-            double worldErrorY = y - r.posAndVel[1];
+            prevTime = curTime;                      //is calculated
+            //current x, y and theta pos and velocities are gotten
+            posAndVel = odometryThread.getPosAndVel();
+            double worldErrorX = x - posAndVel[0]; //x and y world errors are calculated
+            double worldErrorY = y - posAndVel[1];
             //the current theta (modified by an offset) is used to translate world-relative x and y
             //errors into robot-relative x and y errors
-            double thetaOffset = -(r.posAndVel[2] - (Math.PI / 2));
+            double thetaOffset = -(posAndVel[2] - (Math.PI / 2));
             errorX = (worldErrorX * Math.cos(thetaOffset) - (worldErrorY * Math.sin(thetaOffset)));
             errorY = (worldErrorX * Math.sin(thetaOffset) + (worldErrorY * Math.cos(thetaOffset)));
             //the theta error is calculated and normalized
-            errorTheta = AngleUnit.normalizeRadians(theta - r.posAndVel[2]);
+            errorTheta = AngleUnit.normalizeRadians(theta - posAndVel[2]);
 
             //if we are within a small distance of the target position in all three dimensions or
             //the timeout has been reached, exit the control loop; if not, continue
@@ -125,7 +130,7 @@ public class AutoController {
             //has been reached, slam on the brakes in the x dimension
             //otherwise, calculate the desired x velocity by adding the proportional, integral, and
             //derivative components together
-            if ((Math.abs(errorX) < xBrakeDist && Math.abs(r.posAndVel[3]) > velThreshold) ||
+            if ((Math.abs(errorX) < xBrakeDist && Math.abs(posAndVel[3]) > velThreshold) ||
                     xReached) {
                 xVel = 0;
             } else {
@@ -136,7 +141,7 @@ public class AutoController {
             //has been reached, slam on the brakes in the y dimension
             //otherwise, calculate the desired y velocity by adding the proportional, integral, and
             //derivative components together
-            if ((Math.abs(errorY) < yBrakeDist && Math.abs(r.posAndVel[4]) > velThreshold) ||
+            if ((Math.abs(errorY) < yBrakeDist && Math.abs(posAndVel[4]) > velThreshold) ||
                     yReached) {
                 yVel = 0;
             } else {
@@ -147,7 +152,7 @@ public class AutoController {
             //been reached, slam on the brakes in the theta dimension
             //otherwise, calculate the desired theta velocity by adding the proportional, integral,
             //and derivative components together
-            if ((Math.abs(errorTheta) < tBrakeDist && Math.abs(r.posAndVel[5]) > tVelThreshold)
+            if ((Math.abs(errorTheta) < tBrakeDist && Math.abs(posAndVel[5]) > tVelThreshold)
                     || thetaReached) {
                 tVel = 0;
             } else {
@@ -155,12 +160,12 @@ public class AutoController {
             }
 
             //power the motors with the calculated x, y and theta velocities
-            powerMotors(xVel, yVel, tVel);
+            powerDriveMotors(xVel, yVel, tVel);
             opmode.telemetry.update();
         } while (opmode.opModeIsActive());
         if (shouldStop) {
             //if shouldStop is set to true, stop the motors after terminating the motors
-            powerMotors(0, 0, 0);
+            powerDriveMotors(0, 0, 0);
         }
     }
 
@@ -178,68 +183,40 @@ public class AutoController {
 
     public void powDrive(double strafe, double drive, double turn, double timeout, boolean shouldStop) {
         double startTime = runtime.seconds();
-        setMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        powerMotors(strafe, drive, turn);
-        setCurTime();
-        while (opmode.opModeIsActive() && curTime - startTime < timeout) {
+        //setDriveMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        powerDriveMotors(strafe, drive, turn);
+        while (opmode.opModeIsActive() && runtime.seconds() - startTime < timeout) {
             waitFor(5);
-            setCurTime();
         }
-        setMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        //setDriveMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
         if (shouldStop) {
-            powerMotors(0, 0, 0);
+            powerDriveMotors(0, 0, 0);
         }
     }
 
-    public void powerMotors(double strafeVel, double driveVel, double turnVel) {
-        /*driveVel = 0;
-        strafeVel = 0;*/
-        //turnVel = 0;
-        double leftFrontVel = -driveVel - strafeVel + turnVel;
-        double rightFrontVel = -driveVel + strafeVel - turnVel;
-        double leftRearVel = -driveVel + strafeVel + turnVel;
-        double rightRearVel = -driveVel - strafeVel - turnVel;
-        double[] vels = {Math.abs(leftFrontVel), Math.abs(rightFrontVel), Math.abs(leftRearVel), Math.abs(rightRearVel)};
-        Arrays.sort(vels);
-        if (vels[3] > 1) {
-            leftFrontVel /= vels[3];
-            rightFrontVel /= vels[3];
-            leftRearVel /= vels[3];
-            rightRearVel /= vels[3];
-        }
-        r.leftFront.setPower(leftFrontVel);
-        r.rightFront.setPower(rightFrontVel);
-        r.leftRear.setPower(leftRearVel);
-        r.rightRear.setPower(rightRearVel);
-    }
-
-    public void setMotorsMode(DcMotor.RunMode mode) {
-        r.leftFront.setMode(mode);
-        r.leftRear.setMode(mode);
-        r.rightFront.setMode(mode);
-        r.leftRear.setMode(mode);
-    }
-
-    public void stopOdometry() {
-        r.odometryThread.end();
+    public void setDriveMotorsMode(DcMotor.RunMode mode) {
+        leftFront.setMode(mode);
+        leftRear.setMode(mode);
+        rightFront.setMode(mode);
+        leftRear.setMode(mode);
     }
 
     public void setIntakePow(double pow) {
-        r.leftIntake.setPower(pow);
-        r.rightIntake.setPower(-pow);
+        leftIntake.setPower(pow);
+        rightIntake.setPower(-pow);
     }
 
     public void deployIntake() {
         Thread t = new Thread() {
             public void run() {
                 double startTime = runtime.seconds();
-                r.leftIntake.setPower(0.4);
-                r.rightIntake.setPower(0.4);
-                while (opmode.opModeIsActive() && runtime.seconds() - startTime < 0.5) {
+                leftIntake.setPower(0.7);
+                rightIntake.setPower(0.7);
+                while (opmode.opModeIsActive() && runtime.seconds() - startTime < 1) {
                     waitFor(20);
                 }
-                r.leftIntake.setPower(0);
-                r.rightIntake.setPower(0);
+                leftIntake.setPower(0);
+                rightIntake.setPower(0);
             }
         };
         t.start();
@@ -248,11 +225,13 @@ public class AutoController {
     public void intakeStone(double strafe, double drive, double turn, double pow, double timeout) {
         double startTime = runtime.seconds();
         //begin driving at the specified velocities and intaking at the specified power
-        powerMotors(strafe, drive, turn);
+        powerDriveMotors(strafe, drive, turn);
         setIntakePow(pow);
         //wait until the timeout has been reached or a stone has entered the intake
         while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
-                Double.isNaN(r.intakeSensor.getDistance(DistanceUnit.CM))) {
+                Double.isNaN(intakeSensor.getDistance(DistanceUnit.CM))) {
+        /*while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
+                intakeSensor.getDistance(DistanceUnit.CM) >= 5) {*/
             waitFor(5);
         }
         //stop the intake
@@ -261,49 +240,25 @@ public class AutoController {
         double newTimeout = newStartTime - startTime;
         //drive at the specified velocities in reverse (for the same duration) to end up near the
         //starting location
-        powerMotors(-strafe, -drive, -turn);
+        powerDriveMotors(-strafe, -drive, -turn);
         while (opmode.opModeIsActive() && runtime.seconds() - newStartTime < newTimeout) {
             waitFor(10);
         }
         //stop the drive motors
-        powerMotors(0, 0, 0);
+        powerDriveMotors(0, 0, 0);
     }
 
-    public void setBeltBarPos(double pos) {
-        r.leftBeltBar.setPosition(pos);
-        r.rightBeltBar.setPosition(pos);
-    }
-
-    public void setHookPos(double pos) {
-        r.hook.setPosition(pos);
-    }
-
-    public void setLiftPos(final double pos) {
+    public void passThrough() {
         Thread t = new Thread() {
             public void run() {
-                double errorPos;
-                do {
-                    errorPos = pos - r.getLiftPos();
-                    r.setLiftPow(errorPos * liftKP);
-                } while (opmode.opModeIsActive() && Math.abs(errorPos) > liftTolerance);
+                double startTime = runtime.seconds();
+                beltBar.setPos(beltBar.pos[1]);
+                while (opmode.opModeIsActive() && runtime.seconds() - startTime < 0.5) {
+                    waitFor(20);
+                }
+                setClawPos(clawPos[1]);
             }
         };
         t.start();
-    }
-
-    public void waitFor(long m) {
-        try {
-            Thread.sleep(m);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void setCurTime() {
-        curTime = runtime.seconds();
-    }
-
-    private void setPrevTime() {
-        prevTime = curTime;
     }
 }
