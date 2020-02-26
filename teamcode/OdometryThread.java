@@ -24,7 +24,7 @@ public class OdometryThread extends Thread {
     }
 
     public void run() {
-        while(run) {
+        while(!opmode.isStopRequested()) {
             posAndVel = odometry.getPosAndVel();
             RobotLog.a("x: %.3f, y: %.3f, theta: %.3f, xVel: %.3f, yVel: %.3f, tVel: %.3f",
                     posAndVel[0], posAndVel[1], posAndVel[2], posAndVel[3], posAndVel[4], posAndVel[5]);

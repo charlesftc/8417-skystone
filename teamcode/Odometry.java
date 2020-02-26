@@ -22,7 +22,7 @@ public class Odometry {
     private double[] horizontalOdomPos; //the vertical (y only) distance from the center of the robot
                                  //to the horizontal odometry wheel
     private double sheerFactor;
-    private int prevL = 0; //previous tick positions of the left, right, and horizontal encoders
+    private int prevL = 0; //previous tick pos of the left, right, and horizontal encoders
     private int prevR = 0;
     private int prevH = 0;
     private double[] posAndVel; //array with the robot's world position stored as {x, y, theta}
@@ -150,7 +150,7 @@ public class Odometry {
         return angles.firstAngle + angleOffset;
     }
 
-    private void initImu() {
+    public void initImu() {
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
         parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
@@ -158,10 +158,13 @@ public class Odometry {
         parameters.loggingTag = "imu";
         imu = opmode.hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
+        opmode.telemetry.addData("Status", "Ready to start!");
+        opmode.telemetry.update();
         while (!opmode.isStopRequested() && !imu.isGyroCalibrated()) {
             opmode.sleep(25);
             opmode.idle();
         }
-
+        opmode.telemetry.addData("Status", "Ready to start! (done calibrating)");
+        opmode.telemetry.update();
     }
 }

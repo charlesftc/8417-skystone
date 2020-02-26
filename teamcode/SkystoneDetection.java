@@ -30,16 +30,13 @@ public class SkystoneDetection {
     public SkystoneDetection(LinearOpMode op, boolean isRed) {
         opmode = op;
         if (isRed) {
-            /*leftRect = new Rect(75, 20, 25, 170);
-            centerRect = new Rect(307, 20, 25, 170);
-            rightRect = new Rect(540, 20, 25, 170);*/
-            leftRect = new Rect(50, 20, 25, 120);
-            centerRect = new Rect(257, 20, 25, 120);
-            rightRect = new Rect(515, 20, 25, 120);
+            leftRect = new Rect(50, 5, 25, 120);
+            centerRect = new Rect(257, 5, 25, 120);
+            rightRect = new Rect(515, 5, 25, 120);
         } else {
-            leftRect = new Rect(150, 20, 25, 120);
-            centerRect = new Rect(357, 20, 25, 120);
-            rightRect = new Rect(565, 20, 25, 120);
+            leftRect = new Rect(150, 5, 25, 120);
+            centerRect = new Rect(357, 5, 25, 120);
+            rightRect = new Rect(565, 5, 25, 120);
         }
         rects[0] = leftRect;
         rects[1] = centerRect;
@@ -66,13 +63,22 @@ public class SkystoneDetection {
     }
 
     public void stopStream() {
-        usbCam.stopStreaming();
-        usbCam.closeCameraDevice();
+        Thread t = new Thread() {
+            public void run() {
+                usbCam.stopStreaming();
+                usbCam.closeCameraDevice();
+            }
+        };
+        t.start();
     }
 
     class SkystonePipeline extends OpenCvPipeline {
         @Override
         public Mat processFrame(Mat input) {
+            //when stop is pressed, cleanly close the stream and the pipeline
+            if (opmode.isStopRequested()) {
+                stopStream();
+            }
             //draw the three stone detection rectangles on the screen (if monitoring is enabled)
             Imgproc.rectangle(input, leftRect, new Scalar(255, 0, 0), 2);
             Imgproc.rectangle(input, centerRect, new Scalar(255, 0, 0), 2);
