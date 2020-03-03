@@ -13,22 +13,22 @@ import java.util.Locale;
 public class TeleControl extends RobotControl {
     private double driveSpeed = 1;
     private double strafeSpeed = 2;
-    private double slowmodeFactor = 0.25;
+    private double slowmodeFactor = 0.3; //0.25
     private double intakePow = 1;
-    private double dispensePow = -0.4;
+    private double dispensePow = -0.7;
     private double deployPow = 0.4;
 
-    private boolean prevA1;
-    private boolean prevB1;
-    private boolean prevA2;
-    private boolean prevB2;
-    private boolean prevRightBumper;
-    private boolean prevHasStone;
-    private boolean intakeStopped;
+    private boolean prevBack = false;
+    private boolean prevA1 = false;
+    private boolean prevB1 = false;
+    private boolean prevA2 = false;
+    private boolean prevB2 = false;
+    private boolean prevRightBumper = false;
+    private boolean prevHasStone = false;
+    private boolean intakeStopped = false;
 
     public TeleControl(LinearOpMode op, boolean useOdometry) {
         super(op, useOdometry);
-        opmode = op;
         opmode.telemetry.addLine().addData("Auto Stacker", new Func<String>() {
             @Override
             public String value() {
@@ -60,8 +60,8 @@ public class TeleControl extends RobotControl {
             xPow = (worldX * Math.cos(thetaOffset) - (worldY * Math.sin(thetaOffset)));
             yPow = (worldX * Math.sin(thetaOffset) + (worldY * Math.cos(thetaOffset)));
         }
-        //if the left bumper is being pressed, use slowmode
-        if (gpad.left_bumper) {
+        //if one of the bumpers is being pressed, use slowmode
+        if (gpad.left_bumper || gpad.right_bumper) {
             xPow *= slowmodeFactor;
             yPow *= slowmodeFactor;
             turnPow *= slowmodeFactor;
@@ -123,12 +123,12 @@ public class TeleControl extends RobotControl {
         boolean a2 = gpad.a;
         boolean b2 = gpad.b;
         if (prevB2 && !b2 && !gpad.start && autoStacker.level < 11) {
-            if (autoStacker.target == AutoStacker.Target.STACKING) {
+            if (autoStacker.task == AutoStacker.Task.STACKING) {
                 autoStacker.stopThread();
             }
             autoStacker.level++;
         } else if (prevA2 && !a2 && !gpad.start && autoStacker.level > 1) {
-            if (autoStacker.target == AutoStacker.Target.STACKING) {
+            if (autoStacker.task == AutoStacker.Task.STACKING) {
                 autoStacker.stopThread();
             }
             autoStacker.level--;
@@ -148,49 +148,54 @@ public class TeleControl extends RobotControl {
                 || x) {
             autoStacker.stopThread();
         } else if (gpad.left_bumper) {
-            autoStacker.createThread(AutoStacker.Target.PASS_THROUGH);
+            autoStacker.createThread(AutoStacker.Task.TO_PASS_THROUGH);
         } else if (gpad.right_bumper) {
-            autoStacker.createThread(AutoStacker.Target.STACKING);
+            autoStacker.createThread(AutoStacker.Task.STACKING);
         }
-        if (autoStacker.target == AutoStacker.Target.NONE) { //&& !thread.isAlive()) {
-            updateLift(tLeft, tRight);
+        if (autoStacker.task == AutoStacker.Task.NONE) { //&& !thread.isAlive()) {
+            updateLift(tLeft, tRight, gpad.back);
             updateBeltBar(dLeft, dDown, dUp, dRight, sRightY, elapsedTime);
             updateClaw(x, y);
         }
     }
 
-    public void updateLift(float tLeft, float tRight) {
+    public void updateLift(float tLeft, float tRight, boolean back) {
         double pow = 0;
         //if the right trigger is being pressed, set the power level according to its position
         if (tRight > 0.05) {
             pow = tRight;
-        } else if (tLeft > 0.05) {             //if the left trigger is being pressed, set the power
-            pow = -tLeft;// * retractionSpeed; //level according to its negative position, weakened
-        }                                      //to account for the influence of gravity
-        lift.setPow(pow);
+        } else if (tLeft > 0.05) { //if the left trigger is being pressed, set the power level
+            pow = -tLeft;          //according to its negative position, weakened to account for the
+        }                          //influence of gravity
+        if (back) {
+            lift.setZero();
+            lift.setPow(pow, false);
+        } else {
+            lift.setPow(pow, true);
+        }
     }
 
     public void updateBeltBar(boolean dLeft, boolean dDown, boolean dUp, boolean dRight,
                               float sRightY, double elapsedTime) {
         if (sRightY != 0) { //if the stick is being moved, use stick control
-            /*double target = Range.clip(beltBar.getPos() + (-sRightY * beltBar.speed *
-                    elapsedTime), 0, 1);*/
             beltBar.updatePos(Range.clip(beltBar.getPos() + (-sRightY * beltBar.speed *
                     elapsedTime), 0, 1), elapsedTime, false);
         } else if (dLeft) {
-            beltBar.updatePos(beltBar.pos[1], elapsedTime, true); //if dpad left is pressed, set the belt bar to the pass through position;
+            //if dpad left is pressed, command the belt bar to the pass through position;
+            beltBar.updatePos(beltBar.pos[1], elapsedTime, true);
         } else if (dDown) {
-            beltBar.updatePos(beltBar.pos[0], elapsedTime, true); //if dpad down is pressed, set the belt bar to the folded up position
+            //if dpad down is pressed, command the belt bar to the folded up position
+            beltBar.updatePos(beltBar.pos[0], elapsedTime, true);
         } else if (dUp) {
-            beltBar.updatePos(beltBar.pos[3], elapsedTime, true); //if dpad up is pressed, set the belt bar to the top stacking position
+            //if dpad up is pressed, command the belt bar to the top stacking position
+            beltBar.updatePos(beltBar.pos[3], elapsedTime, true);
         } else if (dRight) {
-            beltBar.updatePos(beltBar.pos[2], elapsedTime, true); //if dpad right is pressed, set the belt bar to the bottom stacking position
+            //if dpad right is pressed, command the belt bar to the bottom stacking position
+            beltBar.updatePos(beltBar.pos[2], elapsedTime, true);
         } else {
+            //otherwise, use the last specified task
             beltBar.updatePos(beltBar.getTarget(), elapsedTime, true);
         }
-        /*//otherwise, use the last specified target
-        //command the belt bar servos to achieve the updated target position
-        updatePos(target, elapsedTime, true);*/
     }
 
     public void updateClaw(boolean x, boolean y) {
@@ -207,11 +212,19 @@ public class TeleControl extends RobotControl {
         boolean a = gpad.a;
         boolean b = gpad.b;
         if (!a && prevA1) {
-            hook.setPosition(0);
+            hook.setPosition(hookPos[0]);
         } else if (!b && prevB1) {
-            hook.setPosition(1);
+            hook.setPosition(hookPos[1]);
         }
         prevA1 = a;
         prevB1 = b;
+    }
+
+    public void updateCapstone(Gamepad gpad) {
+        boolean back = gpad.back;
+        if (!back && prevBack) {
+            autoStacker.createThread(AutoStacker.Task.PLACE_CAP);
+        }
+        prevBack = back;
     }
 }

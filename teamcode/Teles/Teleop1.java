@@ -18,6 +18,7 @@ public class Teleop1 extends LinearOpMode {
 
         t.beltBar.setPos(t.beltBar.pos[0]);
         t.setClawPos(t.clawPos[0]);
+        t.setCapstonePos(0);
 
         while (opModeIsActive()) {
             double startTime = t.runtime.seconds();
@@ -26,11 +27,9 @@ public class Teleop1 extends LinearOpMode {
 
             t.updateDriving(gamepad1, false);
             t.updateIntake(gamepad1);
-            /*t.updateLift(gamepad2);
-            t.updateBeltBar(gamepad2, elapsedTime);
-            t.updateClaw(gamepad2);*/
             t.updateStackingSystem(gamepad2, elapsedTime);
             t.updateHooks(gamepad1);
+            t.updateCapstone(gamepad1);
             telemetry.update();
         }
 

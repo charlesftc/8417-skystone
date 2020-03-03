@@ -26,7 +26,7 @@ public class Lift {
         right = r.opmode.hardwareMap.get(DcMotor.class, "right_lift"); //port 1
         left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         left.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        right.setDirection(DcMotorSimple.Direction.REVERSE);
+        left.setDirection(DcMotorSimple.Direction.REVERSE);
         left.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         right.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
@@ -46,11 +46,11 @@ public class Lift {
                     //double pow = Math.signum(errorPos) * Math.max(Math.abs(errorPos), minError);
                     double pow = errorPos >= 0 ? Math.max(errorPos, minError) * kP :
                             Math.min(errorPos, -minError) * kP * retractionSpeed;
-                    setPow(pow);
+                    setPow(pow, true);
                 } while (r.opmode.opModeIsActive() && r.runtime.seconds() - startTime < timeout);
                 busy = false;
                 if (shouldStop) {
-                    setPow(0);
+                    setPow(0, true);
                 }
             }
         };
@@ -61,29 +61,33 @@ public class Lift {
         double errorPos = pos - getPos();
         if (Math.abs(errorPos) <= tolerance) {
             busy = false;
-            setPow(0);
+            setPow(0, true);
             return;
         }
         setPow(errorPos >= 0 ? Math.max(errorPos, minError) * kP : Math.min(errorPos,
-                -minError) * kP);
+                -minError) * kP, true);
     }
 
-    public void setPow(double pow) {
+    public void setPow(double pow, boolean shouldAdjust) {
+        //if a retraction is being commanded, reduce it by the retraction speed factor
         if (pow < 0) {
             pow *= retractionSpeed;
         }
         //read the current lift position
         double pos = getPos();
-        //if the lift is being commanded to extend past its limits, stop it
-        if (pos <= -0.01) { //0
-            pow = Math.max(pow, 0); //0.08
-        } else if(pos >= 1) {
-            pow = Math.min(pow, 0);
-        }
-        //adjust the power level to account for gravity by adding an amount to it proportional to
-        //the current extension
-        if (pos > powOffsetThreshold) {
-            pow += maxPowOffset * Range.scale(pos, 0, 1, 0.5, 1);
+        //if specified:
+        if (shouldAdjust) {
+            //if the lift is being commanded to extend past its limits, stop it
+            if (pos <= -0.01) {
+                pow = Math.max(pow, 0);
+            } else if (pos >= 1) {
+                pow = Math.min(pow, 0);
+            }
+            //adjust the power level to account for gravity by adding an amount to it proportional to
+            //the current extension
+            if (pos > powOffsetThreshold) {
+                pow += maxPowOffset * Range.scale(pos, 0, 1, 0.5, 1);
+            }
         }
         //make sure the result does not exceed 1 or -1
         pow = Range.clip(pow, -1, 1);
@@ -105,5 +109,10 @@ public class Lift {
 
     public void setBusy(boolean b) {
         busy = b;
+    }
+
+    public void setZero() {
+        left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        left.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
     }
 }

@@ -14,7 +14,7 @@ import java.util.Locale;
 
 public class RobotControl {
     LinearOpMode opmode;
-    public ElapsedTime runtime = new ElapsedTime(); //private??
+    public ElapsedTime runtime = new ElapsedTime();
 
     public OdometryThread odometryThread;
     double posAndVel[];
@@ -34,13 +34,17 @@ public class RobotControl {
 
     Servo claw;
     //public double[] clawPos = {0.69, 0.975};
-    public double[] clawPos = {0.08, 1}; //0.59
+    public double[] clawPos = {0.08, 0.9}; //0.59
 
     DcMotor leftIntake;
     DcMotor rightIntake;
     DistanceSensor intakeSensor;
 
+    public Servo capstoneServo;
+    public double[] capPos = {0.25, 1};
+
     Servo hook;
+    public double[] hookPos = {0, 0.65}; //0.5, 1
 
     public RobotControl(LinearOpMode op, boolean useOdometry) {
         opmode = op;
@@ -74,13 +78,16 @@ public class RobotControl {
         beltBar = new BeltBar(this);
         autoStacker = new AutoStacker(this);
 
-        claw = opmode.hardwareMap.get(Servo.class, "dispenser_servo"); //rename to claw_servo
+        claw = opmode.hardwareMap.get(Servo.class, "claw_servo");
 
         leftIntake = opmode.hardwareMap.get(DcMotor.class, "left_intake");
         rightIntake = opmode.hardwareMap.get(DcMotor.class, "right_intake");
         leftIntake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightIntake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         intakeSensor = opmode.hardwareMap.get(DistanceSensor.class, "intake_sensor");
+
+        capstoneServo = opmode.hardwareMap.get(Servo.class, "capstone_servo");
+        capstoneServo.setDirection(Servo.Direction.REVERSE);
 
         hook = opmode.hardwareMap.get(Servo.class, "hook");
         hook.setDirection(Servo.Direction.REVERSE);
@@ -137,6 +144,10 @@ public class RobotControl {
 
     public void setClawPos(double pos) {
         claw.setPosition(pos);
+    }
+
+    public void setCapstonePos(double pos) {
+        capstoneServo.setPosition(pos);
     }
 
     public void waitFor(long m) {

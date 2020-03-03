@@ -22,7 +22,7 @@ public class Odometry {
     private double[] horizontalOdomPos; //the vertical (y only) distance from the center of the robot
                                  //to the horizontal odometry wheel
     private double sheerFactor;
-    private int prevL = 0; //previous tick pos of the left, right, and horizontal encoders
+    private int prevL = 0; //previous tick positions of the left, right, and horizontal encoders
     private int prevR = 0;
     private int prevH = 0;
     private double[] posAndVel; //array with the robot's world position stored as {x, y, theta}
@@ -120,7 +120,7 @@ public class Odometry {
     }
 
     private double getDeltaR() {
-        int ticks = right.getCurrentPosition();
+        int ticks = -right.getCurrentPosition();
         int delta = ticks - prevR;
         prevR = ticks;
         return delta * inchesPerTickR; //translates distance from encoder ticks to inches

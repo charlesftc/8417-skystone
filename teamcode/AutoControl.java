@@ -36,10 +36,6 @@ public class AutoControl extends RobotControl {
     private double prevErrorY = 0;
     private double prevErrorT = 0;
 
-    private double defTolerance = 0.5;
-    private double defToleranceT = 0.3;
-    private double defaultTimeout = 3;
-
     private double yBrakeDist = 14;
     private double xBrakeDist = 10;
     private double tBrakeDist = Math.toRadians(4.5);
@@ -54,13 +50,6 @@ public class AutoControl extends RobotControl {
     public AutoControl(LinearOpMode op) {
         super(op, true);
         opmode = op;
-        //setDriveMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER); //should i have this?
-        /*opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
-            @Override
-            public String value() {
-                return String.format(Locale.getDefault(), "pos: %.3f", lift.getPos());
-            }
-        });*/
         opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
@@ -70,7 +59,7 @@ public class AutoControl extends RobotControl {
     }
 
     public void pidDrive(double x, double y, double theta, double tolerance, double tTolerance,
-                         double timeout, boolean shouldStop) {
+                         double timeout, boolean shouldSlow, boolean shouldStop) {
         double startTime = runtime.seconds();
         double errorX;
         double errorY;
@@ -81,7 +70,7 @@ public class AutoControl extends RobotControl {
             double curTime = runtime.seconds();
             double elapsedTime = curTime - prevTime; //the time elapsed since the previous iteration
             prevTime = curTime;                      //is calculated
-            //current x, y and theta pos and velocities are gotten
+            //current x, y and theta positions and velocities are gotten
             posAndVel = odometryThread.getPosAndVel();
             double worldErrorX = x - posAndVel[0]; //x and y world errors are calculated
             double worldErrorY = y - posAndVel[1];
@@ -93,7 +82,7 @@ public class AutoControl extends RobotControl {
             //the theta error is calculated and normalized
             errorTheta = AngleUnit.normalizeRadians(theta - posAndVel[2]);
 
-            //if we are within a small distance of the target position in all three dimensions or
+            //if we are within a small distance of the task position in all three dimensions or
             //the timeout has been reached, exit the control loop; if not, continue
             boolean xReached = Math.abs(errorX) <= tolerance;
             boolean yReached = Math.abs(errorY) <= tolerance;
@@ -126,34 +115,32 @@ public class AutoControl extends RobotControl {
             double tP = (Math.abs(errorTheta) > minErrorT ? errorTheta : minErrorT * Math.copySign(
                     1.0, errorTheta)) * thetaKP;
 
-            //if we are nearing the target x position and are traveling quickly, or if the x goal
-            //has been reached, slam on the brakes in the x dimension
+            //if shouldStop is enabled and we are nearing the target x position while traveling
+            //quickly or are at the target x position, slam on the brakes in the x dimension
             //otherwise, calculate the desired x velocity by adding the proportional, integral, and
             //derivative components together
-            if ((Math.abs(errorX) < xBrakeDist && Math.abs(posAndVel[3]) > velThreshold) ||
-                    xReached) {
+            if (shouldSlow && ((Math.abs(errorX) < xBrakeDist && Math.abs(posAndVel[3]) >
+                    velThreshold) || xReached)) {
                 xVel = 0;
             } else {
                 xVel = xP + xErrorSum + dErrorX;
             }
-
-            //if we are nearing the target y position and are traveling quickly, or if the y goal
-            //has been reached, slam on the brakes in the y dimension
+            //if shouldStop is enabled and we are nearing the target y position while traveling
+            //quickly or are at the target y position, slam on the brakes in the y dimension
             //otherwise, calculate the desired y velocity by adding the proportional, integral, and
             //derivative components together
-            if ((Math.abs(errorY) < yBrakeDist && Math.abs(posAndVel[4]) > velThreshold) ||
-                    yReached) {
+            if (shouldSlow && ((Math.abs(errorY) < yBrakeDist && Math.abs(posAndVel[4]) >
+                    velThreshold) || yReached)) {
                 yVel = 0;
             } else {
                 yVel = yP + yErrorSum + dErrorY;
             }
-
-            //if we are nearing the target heading and are turning quickly, or if the theta goal has
-            //been reached, slam on the brakes in the theta dimension
+            //if shouldStop is enabled and we are nearing the target heading while traveling quickly
+            //or are at the target heading, slam on the brakes in the theta dimension
             //otherwise, calculate the desired theta velocity by adding the proportional, integral,
             //and derivative components together
-            if ((Math.abs(errorTheta) < tBrakeDist && Math.abs(posAndVel[5]) > tVelThreshold)
-                    || thetaReached) {
+            if (shouldSlow && ((Math.abs(errorTheta) < tBrakeDist && Math.abs(posAndVel[5]) >
+                    tVelThreshold) || thetaReached)) {
                 tVel = 0;
             } else {
                 tVel = tP + tErrorSum + dErrorT;
@@ -163,32 +150,17 @@ public class AutoControl extends RobotControl {
             powerDriveMotors(xVel, yVel, tVel);
             opmode.telemetry.update();
         } while (opmode.opModeIsActive());
-        if (shouldStop) {
-            //if shouldStop is set to true, stop the motors after terminating the motors
+        if (shouldStop) { //if specified, stop the motors after terminating the loop
             powerDriveMotors(0, 0, 0);
         }
     }
 
-    public void pidDrive(double x, double y, double theta, double timeout, boolean shouldStop) {
-        pidDrive(x, y, theta, defTolerance, defToleranceT, timeout, shouldStop);
-    }
-
-    public void pidDrive(double x, double y, double theta, double tol, double tTol, boolean shouldStop) {
-        pidDrive(x, y, theta, tol, tTol, defaultTimeout, shouldStop);
-    }
-
-    public void pidDrive(double x, double y, double theta, boolean shouldStop) {
-        pidDrive(x, y, theta, defTolerance, defToleranceT, defaultTimeout, shouldStop);
-    }
-
-    public void powDrive(double strafe, double drive, double turn, double timeout, boolean shouldStop) {
+    public void velDrive(double strafe, double drive, double turn, double timeout, boolean shouldStop) {
         double startTime = runtime.seconds();
-        //setDriveMotorsMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         powerDriveMotors(strafe, drive, turn);
         while (opmode.opModeIsActive() && runtime.seconds() - startTime < timeout) {
             waitFor(5);
         }
-        //setDriveMotorsMode(DcMotor.RunMode.RUN_USING_ENCODER);
         if (shouldStop) {
             powerDriveMotors(0, 0, 0);
         }
@@ -222,7 +194,7 @@ public class AutoControl extends RobotControl {
         t.start();
     }
 
-    public void intakeStone(double strafe, double drive, double turn, double pow, double timeout) {
+    public void intake(double strafe, double drive, double turn, double pow, double timeout, boolean shouldStop) {
         double startTime = runtime.seconds();
         //begin driving at the specified velocities and intaking at the specified power
         powerDriveMotors(strafe, drive, turn);
@@ -230,12 +202,8 @@ public class AutoControl extends RobotControl {
         //wait until the timeout has been reached or a stone has entered the intake
         while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
                 Double.isNaN(intakeSensor.getDistance(DistanceUnit.CM))) {
-        /*while (opmode.opModeIsActive() && (runtime.seconds() - startTime < timeout) &&
-                intakeSensor.getDistance(DistanceUnit.CM) >= 5) {*/
             waitFor(5);
         }
-        //stop the intake
-        //setIntakePow(0);
         double newStartTime = runtime.seconds();
         double newTimeout = newStartTime - startTime;
         //drive at the specified velocities in reverse (for the same duration) to end up near the
@@ -244,8 +212,11 @@ public class AutoControl extends RobotControl {
         while (opmode.opModeIsActive() && runtime.seconds() - newStartTime < newTimeout) {
             waitFor(10);
         }
-        //stop the drive motors
-        powerDriveMotors(0, 0, 0);
+        if (shouldStop) { //if specified, stop the drive motors
+            powerDriveMotors(0, 0, 0);
+        }
+        passThrough(); //start the pass through sequence (on a separate thread)
+        setIntakePow(0); //stop the intake
     }
 
     public void passThrough() {

@@ -17,11 +17,11 @@ public class ControlSystemTest extends LinearOpMode {
 
         waitForStart();
 
-        a.pidDrive(0, 12, 90, 0.3, 1.5, 3, true);
-        a.pidDrive(0, 24, 90, 0.4, 1.5, 5, true);
-        a.pidDrive(-4, 24, 90, 0.4, 1.5, 5, true);
-        a.pidDrive(-24, 24, 90, 0.4, 1.5, 5, true);
-        a.pidDrive(0, 24, 180, 0.4, 1.5, 5, true);
-        a.pidDrive(0, 0, 90, 0.4, 1.5, 5, true);
+        a.pidDrive(0, 12, 90, 0.3, 1.5, 3, true, true);
+        a.pidDrive(0, 24, 90, 0.4, 1.5, 5, true, true);
+        a.pidDrive(-4, 24, 90, 0.4, 1.5, 5, true, true);
+        a.pidDrive(-24, 24, 90, 0.4, 1.5, 5, true, true);
+        a.pidDrive(0, 24, 180, 0.4, 1.5, 5, true, true);
+        a.pidDrive(0, 0, 90, 0.4, 1.5, 5, true, true);
     }
 }

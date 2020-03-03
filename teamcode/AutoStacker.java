@@ -5,30 +5,30 @@ import com.qualcomm.robotcore.util.Range;
 import static java.lang.Double.isNaN;
 
 public class AutoStacker {
-    public enum Target {
-        NONE, PASS_THROUGH, STACKING, PLACE_STONE
+    public enum Task {
+        NONE, TO_PASS_THROUGH, STACKING, PLACE_STONE, PLACE_CAP
     }
-    Target target = Target.NONE;
+    Task task = Task.NONE;
     private RobotControl r;
-    private Thread thread = null; //hopefully you remember what to do here bc i'm too lazy to write it down
-    int level = 1;
-    double baseHeight = 2.5;
-    double liftTopOffset = -7;
+    private Thread thread = null;
+    public int level = 1;
 
     public AutoStacker(RobotControl r) {
         this.r = r;
     }
 
-    public void move(double liftPos, double beltBarPos, Target target, double minTime, double maxTime) {
+    public void move(double liftPos, double beltBarPos, Task task, double minTime, double
+                     maxTime) {
         double startTime = r.runtime.seconds();
         double prevTime = startTime;
         double curTime = startTime;
         r.lift.setBusy(true);
         while (r.lift.getBusy() || curTime - startTime < minTime) {
             curTime = r.runtime.seconds();
-            if (!r.opmode.opModeIsActive() || this.target != target || curTime - startTime >= maxTime) {
+            if (!r.opmode.opModeIsActive() || this.task != task || curTime - startTime >=
+                    maxTime) {
                 r.lift.setBusy(false);
-                r.lift.setPow(0);
+                r.lift.setPow(0, true);
                 r.beltBar.setTarget(r.beltBar.getPos());
                 return;
             }
@@ -42,118 +42,95 @@ public class AutoStacker {
         }
     }
 
-    public void createThread(final Target target) {
-        if (target == this.target) {
+    public void createThread(final Task task) {
+        if (task == this.task) {
             return;
         }
         stopThread();
-        if (target == Target.NONE) {
+        if (task == Task.NONE) {
             return;
         }
-        this.target = target;
+        this.task = task;
         thread = new Thread() {
             public void run() {
-                /*double prevTime = runtime.seconds();
-                while (opmode.opModeIsActive() && target == target) {
-                    double curTime = runtime.seconds();
-                    move(target, curTime - prevTime);
-                    prevTime = curTime;
-                }*/
-                if (AutoStacker.this.target == Target.PASS_THROUGH) {
+                if (AutoStacker.this.task == Task.TO_PASS_THROUGH) {
                     toPassThrough();
-                } else if (AutoStacker.this.target == Target.STACKING) {
+                } else if (AutoStacker.this.task == Task.STACKING) {
                     toStacking(0.4);
-                } else if (AutoStacker.this.target == Target.PLACE_STONE) {
-                    placeStone(0.6);
+                } else if (AutoStacker.this.task == Task.PLACE_STONE) {
+                    placeStone(0.4);
+                } else if (AutoStacker.this.task == Task.PLACE_CAP) {
+                    placeCap(0.4);
                 }
-                AutoStacker.this.target = Target.NONE;
+                AutoStacker.this.task = Task.NONE;
             }
         };
         thread.start();
     }
 
     private void toPassThrough() {
-        //r.claw.setPosition(r.clawPos[0]);
         r.setClawPos(r.clawPos[0]);
         if (r.beltBar.getPos() > r.beltBar.passRange[0]) {
             if (r.lift.getPos() < r.lift.minClawPassPos) {
-                move(r.lift.minClawPassPos, r.beltBar.passRange[1], Target.PASS_THROUGH, 0.3, 0.5);
-                move(r.lift.minClawPassPos, r.beltBar.pos[1], Target.PASS_THROUGH, 0.6, 0.6);
+                move(r.lift.minClawPassPos, r.beltBar.passRange[1], Task.TO_PASS_THROUGH, 0.3, 0.5);
+                move(r.lift.minClawPassPos, r.beltBar.pos[1], Task.TO_PASS_THROUGH, 0.6, 0.6);
             } else {
-                move(r.lift.minClawPassPos, r.beltBar.pos[1], Target.PASS_THROUGH, 0.75, 1);
+                move(r.lift.minClawPassPos, r.beltBar.pos[1], Task.TO_PASS_THROUGH, 0.75, 1);
             }
         }
-        move(-r.lift.tolerance, r.beltBar.pos[1], Target.PASS_THROUGH, 0.3, 1);
+        move(-r.lift.tolerance, r.beltBar.pos[1], Task.TO_PASS_THROUGH, 0.3, 1);
     }
 
     private void toStacking(double retractionFactor) {
-        //double inches = l >= 9 ? ((l - 1) * 4) + r.lift.topStackingOffset : ((l - 1) * 4);
-        double beltBarTarget = r.beltBar.pos[2];
-        double height = ((level - 1) * 4) + 5.5; //4.5 instead of 5
-        if (level == 1) {
-            height += 1;
-        } else if (level >= 9) {
-            height -= 9.5; //8.5
-            beltBarTarget = r.beltBar.pos[3];
-        }
-        double liftTarget = Range.scale(height, 0, r.lift.maxExtension, 0, 1);
-        //double beltBarTarget = level >= 9 ? r.beltBar.pos[3] : r.beltBar.pos[2];
         r.lift.retractionSpeed *= retractionFactor;
+        double liftTarget = getLiftTarget(level);
+        double beltBarTarget = level < 9 ? r.beltBar.pos[2] : r.beltBar.pos[3];
         if (r.beltBar.getPos() < r.beltBar.stonePassRange[1]) {
             if (r.lift.getPos() < r.lift.minStonePassPos) {
-                move(r.lift.minStonePassPos, r.beltBar.stonePassRange[0], Target.STACKING, 0.3, 0.5);
+                move(r.lift.minStonePassPos, r.beltBar.stonePassRange[0], Task.STACKING, 0.3, 0.5);
             }
             if (liftTarget < r.lift.minStonePassPos) {
-                move(r.lift.minStonePassPos, beltBarTarget, Target.STACKING, 0.6, 0.6);
+                move(r.lift.minStonePassPos, beltBarTarget, Task.STACKING, 0.6, 0.6);
             }
-                    /*} else {
-                        move(minStonePassPos, pos[2], Target.STACKING, 0.75, 1);
-                    }*/
         }
-        move(liftTarget, beltBarTarget, Target.STACKING, 0.5, 1.5);
-        r.lift.retractionSpeed *= 1 / retractionFactor;
+        move(liftTarget, beltBarTarget, Task.STACKING, 0.5, 1.5);
+        r.lift.retractionSpeed /= retractionFactor;
     }
 
     public void placeStone(double retractionFactor) {
         r.lift.retractionSpeed *= retractionFactor;
-        r.autoStacker.move(0.005, r.beltBar.pos[2], Target.PLACE_STONE, 0, 0.4); //liftPos 0.017
+        double liftTarget = (Math.max(getLiftTarget(level), r.lift.minStonePassPos)) + 0.05;
+        double placeTarget = level == 1 ? 0.005 : liftTarget - 0.12;
+        move(liftTarget, r.beltBar.pos[1], Task.PLACE_STONE, 0, 0.8);
+        move(liftTarget, r.beltBar.pos[2], Task.PLACE_STONE, 0.5, 0.5);
+        move(placeTarget, r.beltBar.pos[2], Task.PLACE_STONE, 0, 0.6);
+        r.lift.retractionSpeed /= retractionFactor;
         r.setClawPos(r.clawPos[0]);
-        r.lift.retractionSpeed *= 1 / retractionFactor;
+        r.waitFor(500);
+        move(liftTarget, r.beltBar.pos[2], Task.PLACE_STONE, 0, 0.5);
+        move(liftTarget, r.beltBar.pos[1], Task.PLACE_STONE, 0.4, 0.4);
+        move(-r.lift.tolerance, r.beltBar.pos[1], Task.PLACE_STONE, 0, 1);
     }
 
-    private void toStacking2(double retractionFactor) {
-        double beltBarTarget = r.beltBar.pos[2];
-        double height = ((level - 1) * 4) + 5.5; //4.5 instead of 5
-        if (level == 1) {
-            height += 1;
-        } else if (level >= 9) {
-            height -= 9.5; //8.5
-            beltBarTarget = r.beltBar.pos[3];
-        }
-        double liftTarget = Range.scale(height, 0, r.lift.maxExtension, 0, 1);
-        //double beltBarTarget = level >= 9 ? r.beltBar.pos[3] : r.beltBar.pos[2];
+    public void placeCap(double retractionFactor) {
         r.lift.retractionSpeed *= retractionFactor;
-        if (r.beltBar.getPos() < r.beltBar.stonePassRange[1]) {
-            double pos = r.lift.minStonePassPos;
-            if (level < 9) {
-                pos = liftTarget + 0.05;
-            }
-            if (r.lift.getPos() < pos) {
-                move(pos, r.beltBar.stonePassRange[0], Target.STACKING, 0.3, 1);
-            }
-            if (liftTarget < r.lift.minStonePassPos) {
-                move(pos, beltBarTarget, Target.STACKING, 0.6, 0.6);
-            }
-                    /*} else {
-                        move(minStonePassPos, pos[2], Target.STACKING, 0.75, 1);
-                    }*/
-        }
-        move(liftTarget, beltBarTarget, Target.STACKING, 0.5, 1.5);
-        r.lift.retractionSpeed *= 1 / retractionFactor;
+        r.setClawPos(r.clawPos[0]);
+        move(0.3, r.beltBar.pos[0], Task.PLACE_CAP, 0, 1);
+        r.setCapstonePos(r.capPos[1]);
+        r.waitFor(600);
+        move(-r.lift.tolerance, r.beltBar.pos[0], Task.PLACE_CAP, 0, 1);
+        r.lift.retractionSpeed /= retractionFactor;
     }
+
+    /*public void dropStone() {
+        move(r.lift.minStonePassPos, r.beltBar.stonePassRange[0], AutoStacker.Task.DROP_STONE, 0, 0.5);
+        move(r.lift.minStonePassPos, 0.85, AutoStacker.Task.DROP_STONE, 0.6, 0.6);
+        r.setClawPos(r.clawPos[0]);
+        r.waitFor(350);
+    }*/
 
     public void stopThread() {
-        target = Target.NONE;
+        task = Task.NONE;
         if (thread != null) {
             if (thread.isAlive()) {
                 try {
@@ -163,5 +140,15 @@ public class AutoStacker {
                 }
             }
         }
+    }
+
+    private double getLiftTarget(int level) {
+        double height = ((level - 1) * 4) + 5.5;
+        if (level == 1) {
+            height += 1;
+        } else if (level >= 9) {
+            height -= 9.5; //8.5
+        }
+        return Range.scale(height, 0, r.lift.maxExtension, 0, 1);
     }
 }

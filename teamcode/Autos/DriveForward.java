@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.AutoControl;
-@Disabled
+
 @Autonomous(name="DriveForward", group="Linear")
 public class DriveForward extends LinearOpMode {
     AutoControl a;
@@ -16,6 +16,6 @@ public class DriveForward extends LinearOpMode {
 
         waitForStart();
 
-        a.pidDrive(0, 12, 90, 0.3, 1.5, 30, true);
+        a.pidDrive(0, 12, 90, 0.3, 1.5, 30, true, true);
     }
 }
