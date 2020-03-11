@@ -32,9 +32,9 @@ public class SkystoneDetection {
         if (isRed) {
             leftRect = new Rect(50, 5, 25, 120);
             centerRect = new Rect(257, 5, 25, 120);
-            rightRect = new Rect(515, 5, 25, 120);
+            rightRect = new Rect(450, 5, 25, 120);
         } else {
-            leftRect = new Rect(150, 5, 25, 120);
+            leftRect = new Rect(215, 5, 25, 120);
             centerRect = new Rect(357, 5, 25, 120);
             rightRect = new Rect(565, 5, 25, 120);
         }

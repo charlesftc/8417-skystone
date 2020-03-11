@@ -15,24 +15,21 @@ public class Teleop2FieldCentric extends LinearOpMode {
         double prevStartTime = t.runtime.seconds();
 
         waitForStart();
-
-        t.beltBar.setPos(t.beltBar.pos[0]);
-        t.setClawPos(t.clawPos[0]);
-        t.setCapstonePos(0);
+        t.start();
 
         while (opModeIsActive()) {
             double startTime = t.runtime.seconds();
             double elapsedTime = startTime - prevStartTime;
             prevStartTime = startTime;
-
+            t.updateBulkRead(true);
             t.updateDriving(gamepad1, true);
             t.updateIntake(gamepad1);
             t.updateStackingSystem(gamepad2, elapsedTime);
             t.updateHooks(gamepad1);
             t.updateCapstone(gamepad1);
+            t.updateFeederServo(gamepad1);
+            telemetry.addData("loop time", elapsedTime * 1000);
             telemetry.update();
         }
-
-        t.odometryThread.end();
     }
 }

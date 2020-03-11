@@ -31,39 +31,17 @@ public class Lift {
         right.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
-
-    public void pidMove(final double pos, final double timeout, final boolean shouldStop) {
-        busy = true;
-        Thread t = new Thread() {
-            public void run() {
-                double startTime = r.runtime.seconds();
-                double errorPos;
-                do {
-                    errorPos = pos - getPos();
-                    if (Math.abs(errorPos) <= tolerance) {
-                        break;
-                    }
-                    //double pow = Math.signum(errorPos) * Math.max(Math.abs(errorPos), minError);
-                    double pow = errorPos >= 0 ? Math.max(errorPos, minError) * kP :
-                            Math.min(errorPos, -minError) * kP * retractionSpeed;
-                    setPow(pow, true);
-                } while (r.opmode.opModeIsActive() && r.runtime.seconds() - startTime < timeout);
-                busy = false;
-                if (shouldStop) {
-                    setPow(0, true);
-                }
-            }
-        };
-        t.start();
-    }
-
     public void updatePos(double pos) {
+        //calculate the error between the target and the current position
         double errorPos = pos - getPos();
+        //if are within a small distance of the target, stop the lift and report the arrival
         if (Math.abs(errorPos) <= tolerance) {
             busy = false;
             setPow(0, true);
             return;
         }
+        //otherwise, command a motor power proportional to the error (capped to a minimum to prevent
+        //overdamping), weakened if going downward to account for the influence of gravity
         setPow(errorPos >= 0 ? Math.max(errorPos, minError) * kP : Math.min(errorPos,
                 -minError) * kP, true);
     }
@@ -73,7 +51,7 @@ public class Lift {
         if (pow < 0) {
             pow *= retractionSpeed;
         }
-        //read the current lift position
+        //get the current lift position (from the latest bulk read)
         double pos = getPos();
         //if specified:
         if (shouldAdjust) {
@@ -98,7 +76,8 @@ public class Lift {
 
     public double getPos() {
         //get the lift's extension in inches
-        double inches = left.getCurrentPosition() / ticksPerInch;
+        //double inches = left.getCurrentPosition() / ticksPerInch;
+        double inches = -r.data1.getMotorCurrentPosition(0) / ticksPerInch;
         //translate this to a scale where 0 is fully retracted and 1 is fully extended
         return Range.scale(inches, 0, maxExtension, 0, 1);
     }

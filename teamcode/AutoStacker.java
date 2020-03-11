@@ -6,7 +6,7 @@ import static java.lang.Double.isNaN;
 
 public class AutoStacker {
     public enum Task {
-        NONE, TO_PASS_THROUGH, STACKING, PLACE_STONE, PLACE_CAP
+        NONE, TO_PASS_THROUGH, STACKING, DROP_STONE, PLACE_STONE, PLACE_CAP
     }
     Task task = Task.NONE;
     private RobotControl r;
@@ -19,25 +19,37 @@ public class AutoStacker {
 
     public void move(double liftPos, double beltBarPos, Task task, double minTime, double
                      maxTime) {
+        //declaring timing variables
         double startTime = r.runtime.seconds();
         double prevTime = startTime;
         double curTime = startTime;
+        //set the lift to busy
         r.lift.setBusy(true);
+        //while the lift is still busy or the minimum time has not yet elapsed:
         while (r.lift.getBusy() || curTime - startTime < minTime) {
+            //update the current time
             curTime = r.runtime.seconds();
+            //if the opmode has been stopped, the current auto stacker task has been changed or the
+            //timeout has been reached:
             if (!r.opmode.opModeIsActive() || this.task != task || curTime - startTime >=
                     maxTime) {
+                //set the lift to not busy
                 r.lift.setBusy(false);
+                //stop the lift motors
                 r.lift.setPow(0, true);
+                //stop the belt bar where it is
                 r.beltBar.setTarget(r.beltBar.getPos());
+                //exit the method
                 return;
             }
+            //otherwise, update the lift and belt bar positions with their respective targets
             if (!isNaN(liftPos)) {
                 r.lift.updatePos(liftPos);
             }
             if (!isNaN(beltBarPos)) {
                 r.beltBar.updatePos(beltBarPos, curTime - prevTime, true);
             }
+            //record this frames timestamp for the next iteration
             prevTime = curTime;
         }
     }
@@ -57,6 +69,8 @@ public class AutoStacker {
                     toPassThrough();
                 } else if (AutoStacker.this.task == Task.STACKING) {
                     toStacking(0.4);
+                } else if (AutoStacker.this.task == Task.DROP_STONE) {
+                    dropStone();
                 } else if (AutoStacker.this.task == Task.PLACE_STONE) {
                     placeStone(0.4);
                 } else if (AutoStacker.this.task == Task.PLACE_CAP) {
@@ -73,12 +87,12 @@ public class AutoStacker {
         if (r.beltBar.getPos() > r.beltBar.passRange[0]) {
             if (r.lift.getPos() < r.lift.minClawPassPos) {
                 move(r.lift.minClawPassPos, r.beltBar.passRange[1], Task.TO_PASS_THROUGH, 0.3, 0.5);
-                move(r.lift.minClawPassPos, r.beltBar.pos[1], Task.TO_PASS_THROUGH, 0.6, 0.6);
+                move(r.lift.minClawPassPos, r.beltBar.pos[0], Task.TO_PASS_THROUGH, 0.6, 0.6);
             } else {
-                move(r.lift.minClawPassPos, r.beltBar.pos[1], Task.TO_PASS_THROUGH, 0.75, 1);
+                move(r.lift.minClawPassPos, r.beltBar.pos[0], Task.TO_PASS_THROUGH, 0.75, 1);
             }
         }
-        move(-r.lift.tolerance, r.beltBar.pos[1], Task.TO_PASS_THROUGH, 0.3, 1);
+        move(-r.lift.tolerance, r.beltBar.pos[0], Task.TO_PASS_THROUGH, 0.3, 1);
     }
 
     private void toStacking(double retractionFactor) {
@@ -122,12 +136,12 @@ public class AutoStacker {
         r.lift.retractionSpeed /= retractionFactor;
     }
 
-    /*public void dropStone() {
+    public void dropStone() {
         move(r.lift.minStonePassPos, r.beltBar.stonePassRange[0], AutoStacker.Task.DROP_STONE, 0, 0.5);
-        move(r.lift.minStonePassPos, 0.85, AutoStacker.Task.DROP_STONE, 0.6, 0.6);
+        move(0.4, 0.85, AutoStacker.Task.DROP_STONE, 0.6, 0.6);
         r.setClawPos(r.clawPos[0]);
         r.waitFor(350);
-    }*/
+    }
 
     public void stopThread() {
         task = Task.NONE;

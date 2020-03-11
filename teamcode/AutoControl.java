@@ -4,11 +4,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-
-import java.util.Locale;
 
 public class AutoControl extends RobotControl {
     private double prevTime = 0;
@@ -50,12 +47,13 @@ public class AutoControl extends RobotControl {
     public AutoControl(LinearOpMode op) {
         super(op, true);
         opmode = op;
-        opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
+        createBulkReadThread(true);
+        /*opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
             @Override
             public String value() {
                 return String.format(Locale.getDefault(), "sensor: %.3f", intakeSensor.getDistance(DistanceUnit.CM));
             }
-        });
+        });*/
     }
 
     public void pidDrive(double x, double y, double theta, double tolerance, double tTolerance,
@@ -71,7 +69,7 @@ public class AutoControl extends RobotControl {
             double elapsedTime = curTime - prevTime; //the time elapsed since the previous iteration
             prevTime = curTime;                      //is calculated
             //current x, y and theta positions and velocities are gotten
-            posAndVel = odometryThread.getPosAndVel();
+            double[] posAndVel = odom.getState();
             double worldErrorX = x - posAndVel[0]; //x and y world errors are calculated
             double worldErrorY = y - posAndVel[1];
             //the current theta (modified by an offset) is used to translate world-relative x and y
@@ -155,7 +153,7 @@ public class AutoControl extends RobotControl {
         }
     }
 
-    public void velDrive(double strafe, double drive, double turn, double timeout, boolean shouldStop) {
+    public void powDrive(double strafe, double drive, double turn, double timeout, boolean shouldStop) {
         double startTime = runtime.seconds();
         powerDriveMotors(strafe, drive, turn);
         while (opmode.opModeIsActive() && runtime.seconds() - startTime < timeout) {

@@ -1,7 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -16,43 +18,46 @@ public class RobotControl {
     LinearOpMode opmode;
     public ElapsedTime runtime = new ElapsedTime();
 
-    public OdometryThread odometryThread;
-    double posAndVel[];
+    private LynxModule hub1;
+    LynxModule.BulkData data1;
 
-    DcMotor leftFront;
-    DcMotor rightFront;
-    DcMotor leftRear;
-    DcMotor rightRear;
+    Odometry odom;
 
-    DcMotor leftOdom;
-    DcMotor rightOdom;
-    DcMotor horizontalOdom;
+    DcMotorEx leftFront;
+    DcMotorEx rightFront;
+    DcMotorEx leftRear;
+    DcMotorEx rightRear;
+
+    DcMotorEx leftOdom;
+    DcMotorEx rightOdom;
+    DcMotorEx horizontalOdom;
 
     Lift lift;
     public BeltBar beltBar;
     public AutoStacker autoStacker;
 
     Servo claw;
-    //public double[] clawPos = {0.69, 0.975};
-    public double[] clawPos = {0.08, 0.9}; //0.59
+    public double[] clawPos = {0.08, 0.9};
 
     DcMotor leftIntake;
     DcMotor rightIntake;
     DistanceSensor intakeSensor;
 
-    public Servo capstoneServo;
-    public double[] capPos = {0.25, 1};
+    private Servo capstoneServo;
+    double[] capPos = {0, 1};
 
     Servo hook;
-    public double[] hookPos = {0, 0.65}; //0.5, 1
+    public double[] hookPos = {0, 0.38, 0.65}; //0.5, 1
 
     public RobotControl(LinearOpMode op, boolean useOdometry) {
         opmode = op;
 
-        leftFront = opmode.hardwareMap.get(DcMotor.class, "left_front");
-        rightFront = opmode.hardwareMap.get(DcMotor.class, "right_front");
-        leftRear = opmode.hardwareMap.get(DcMotor.class, "left_rear");
-        rightRear = opmode.hardwareMap.get(DcMotor.class, "right_rear");
+        hub1 = opmode.hardwareMap.get(LynxModule.class, "Expansion Hub 1");
+
+        leftFront = opmode.hardwareMap.get(DcMotorEx.class, "left_front");
+        rightFront = opmode.hardwareMap.get(DcMotorEx.class, "right_front");
+        leftRear = opmode.hardwareMap.get(DcMotorEx.class, "left_rear");
+        rightRear = opmode.hardwareMap.get(DcMotorEx.class, "right_rear");
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
         leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -63,16 +68,6 @@ public class RobotControl {
         leftRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightRear.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        leftOdom = opmode.hardwareMap.get(DcMotor.class, "left_intake"); //port 2
-        rightOdom = opmode.hardwareMap.get(DcMotor.class, "right_lift"); //port 1
-        horizontalOdom = opmode.hardwareMap.get(DcMotor.class, "right_intake"); //port 3
-        leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         lift = new Lift(this);
         beltBar = new BeltBar(this);
@@ -93,15 +88,23 @@ public class RobotControl {
         hook.setDirection(Servo.Direction.REVERSE);
 
         if (useOdometry) {
-            odometryThread = new OdometryThread(opmode, leftOdom, rightOdom, horizontalOdom);
-            odometryThread.start();
+            leftOdom = opmode.hardwareMap.get(DcMotorEx.class, "left_intake"); //port 2
+            rightOdom = opmode.hardwareMap.get(DcMotorEx.class, "right_lift"); //port 1
+            horizontalOdom = opmode.hardwareMap.get(DcMotorEx.class, "right_intake"); //port 3
+            leftOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            rightOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            horizontalOdom.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            leftOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            rightOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            horizontalOdom.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            odom = new Odometry(opmode, leftOdom, rightOdom, horizontalOdom, runtime);
             opmode.telemetry.addLine().addData("Pos: ", new Func<String>() {
                 @Override
                 public String value() {
-                    return String.format(Locale.getDefault(), "x: %.3f, y: %.3f, theta: %.3f, " +
-                                    "xVel: %.3f, yVel: %.3f, tVel: %.3f",
-                            getPosAndVel()[0], getPosAndVel()[1], getPosAndVel()[2] * (180 / Math.PI),
-                            getPosAndVel()[3], getPosAndVel()[4], getPosAndVel()[5]);
+                    double[] state = odom.getState();
+                    return String.format(Locale.getDefault(), "x: %.3f, y: %.3f, theta:" +
+                            "%.3f, xVel: %.3f, yVel: %.3f, tVel: %.3f", state[0], state[1],
+                            Math.toDegrees(state[2]), state[3], state[4], state[5]);
                 }
             });
         }
@@ -130,14 +133,6 @@ public class RobotControl {
         rightRear.setPower(rightRearVal);
     }
 
-    public double[] getPosAndVel() {
-        return odometryThread.getPosAndVel();
-    }
-
-    public void stopOdometry() {
-        odometryThread.end();
-    }
-
     public void setHookPos(double pos) {
         hook.setPosition(pos);
     }
@@ -148,6 +143,24 @@ public class RobotControl {
 
     public void setCapstonePos(double pos) {
         capstoneServo.setPosition(pos);
+    }
+
+    public void createBulkReadThread(final boolean useOdom) {
+        Thread t = new Thread() {
+            public void run() {
+                while (!opmode.isStopRequested()) {
+                    updateBulkRead(useOdom);
+                }
+            }
+        };
+        t.start();
+    }
+
+    public void updateBulkRead(boolean useOdom) {
+        data1 = hub1.getBulkData();
+        if (useOdom) {
+            odom.update(data1);
+        }
     }
 
     public void waitFor(long m) {

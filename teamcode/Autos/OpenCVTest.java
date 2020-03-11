@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import org.firstinspires.ftc.teamcode.SkystoneDetection;
 
 @Autonomous(name="OpenCVTest", group="Linear")
-public class SkystoneAuto extends LinearOpMode {
+public class OpenCVTest extends LinearOpMode {
     SkystoneDetection skystoneDetection;
 
     @Override

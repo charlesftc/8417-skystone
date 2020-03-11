@@ -1,8 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Func;
@@ -11,6 +11,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import java.util.Locale;
 
 public class TeleControl extends RobotControl {
+    Servo feederServo;
+
     private double driveSpeed = 1;
     private double strafeSpeed = 2;
     private double slowmodeFactor = 0.3; //0.25
@@ -29,6 +31,8 @@ public class TeleControl extends RobotControl {
 
     public TeleControl(LinearOpMode op, boolean useOdometry) {
         super(op, useOdometry);
+        feederServo = opmode.hardwareMap.get(Servo.class, "feeder_servo");
+        feederServo.setDirection(Servo.Direction.REVERSE);
         opmode.telemetry.addLine().addData("Auto Stacker", new Func<String>() {
             @Override
             public String value() {
@@ -44,6 +48,13 @@ public class TeleControl extends RobotControl {
         });
     }
 
+    public void start() {
+        //beltBar.setPos(beltBar.pos[0]);
+        setClawPos(clawPos[0]);
+        setCapstonePos(0);
+        feederServo.setPosition(0);
+    }
+
     public void updateDriving(Gamepad gpad, boolean useFieldCentric) {
         //read the joysticks to find robot-relative power levels (world-relative if in field-centric
         //mode)
@@ -53,8 +64,8 @@ public class TeleControl extends RobotControl {
         //if in field-centric mode, the current theta (modified by an offset) is used to translate
         //the world-relative x and y powers into robot-relative strafing and driving powers
         if (useFieldCentric) {
-            posAndVel = odometryThread.getPosAndVel();
-            double thetaOffset = -(posAndVel[2] - (Math.PI / 2));
+            //posAndVel = odometry.update();
+            double thetaOffset = -(odom.getState()[2] - (Math.PI / 2));
             double worldX = xPow;
             double worldY = yPow;
             xPow = (worldX * Math.cos(thetaOffset) - (worldY * Math.sin(thetaOffset)));
@@ -71,53 +82,68 @@ public class TeleControl extends RobotControl {
     }
 
     public void updateIntake(Gamepad gpad) {
-        if (gpad.left_trigger > 0.05 && gpad.right_trigger > 0.05) {
+        float rightTrigger = gpad.right_trigger;
+        float leftTrigger = gpad.left_trigger;
+        boolean hasStone = !Double.isNaN(intakeSensor.getDistance(DistanceUnit.CM));
+        if (leftTrigger > 0.05 && rightTrigger > 0.05) {
             leftIntake.setPower(deployPow);
             rightIntake.setPower(deployPow);
-        } else if (gpad.right_trigger > 0.05) {
-            leftIntake.setPower(intakePow * gpad.right_trigger);
-            rightIntake.setPower(-intakePow * gpad.right_trigger);
-        } else if (gpad.left_trigger > 0.05) {
-            leftIntake.setPower(dispensePow * gpad.left_trigger);
-            rightIntake.setPower(-dispensePow * gpad.left_trigger);
+        } else if (rightTrigger > 0.05) {
+            leftIntake.setPower(intakePow * rightTrigger);
+            rightIntake.setPower(-intakePow * rightTrigger);
+        } else if (leftTrigger > 0.05) {
+            leftIntake.setPower(dispensePow * leftTrigger);
+            rightIntake.setPower(-dispensePow * leftTrigger);
         } else {
             leftIntake.setPower(0);
             rightIntake.setPower(0);
         }
+        prevRightBumper = rightTrigger > 0.05; //update global variables for the next iteration
+        prevHasStone = hasStone;
     }
 
-    public void updateIntake2(Gamepad gpad) {
-        //test to see if the right bumper is being held down
+    /*public void updateIntake(Gamepad gpad) {
+        //read the triggers and declare hasStone
         float rightTrigger = gpad.right_trigger;
         float leftTrigger = gpad.left_trigger;
-        //test to see if there is a stone in the intake
-        boolean hasStone = intakeSensor.getDistance(DistanceUnit.CM) != DistanceSensor.distanceOutOfRange;
-        if (rightTrigger > 0.1 && leftTrigger > 0.1) {
-            leftIntake.setPower(deployPow);
+        boolean hasStone = false;
+        if (leftTrigger > 0.05 && rightTrigger > 0.05) { //if both triggers are pressed, deploy the
+            leftIntake.setPower(deployPow);              //intake
             rightIntake.setPower(deployPow);
-        } else if (rightTrigger > 0.1) {
-            if (!prevRightBumper) {     //if the right bumper has been re-pressed, make sure the
-                intakeStopped = false;  //intake is not in auto-termination mode
-            } else if (!prevHasStone && hasStone) { //otherwise, if a stone was just collected,
-                intakeStopped = true;               //enter auto-termination mode
-            }
-            if (!intakeStopped) {                 //if the intake is not in auto-termination mode,
-                leftIntake.setPower(intakePow * rightTrigger); //command the motors to intake
+        } else if (rightTrigger > 0.05) { //otherwise, if the right trigger is being pressed:
+            if (feederServo.getPosition() == 0) { //if in normal mode, intake
+                leftIntake.setPower(intakePow * rightTrigger);
                 rightIntake.setPower(-intakePow * rightTrigger);
-            } else { //otherwise, stop the motors
-                leftIntake.setPower(0);
-                rightIntake.setPower(0);
+            } else { //otherwise, use feeder mode:
+                //test to see if a stone is in the intake
+                hasStone = !Double.isNaN(intakeSensor.getDistance(DistanceUnit.CM));
+                //if the right bumper has been re-pressed, make sure the intake is not in
+                //auto-termination mode
+                if (!prevRightBumper) {
+                    intakeStopped = false;
+                } else if (!prevHasStone && hasStone) { //otherwise, if a stone was just collected,
+                    intakeStopped = true;               //enter auto-termination mode
+                }
+                //if the intake is not in auto-termination mode, command the motors to intake
+                if (!intakeStopped) {
+                    leftIntake.setPower(intakePow * rightTrigger);
+                    rightIntake.setPower(-intakePow * rightTrigger);
+                } else { //otherwise, stop the motors
+                    leftIntake.setPower(0);
+                    rightIntake.setPower(0);
+                }
             }
-        } else if (leftTrigger > 0.1) { //if the left trigger is being pressed, dispense
-            leftIntake.setPower(dispensePow * gpad.left_trigger);
-            rightIntake.setPower(-dispensePow * gpad.left_trigger);
+        } else if (leftTrigger > 0.05) { //otherwise, if the left trigger is being pressed, dispense
+            leftIntake.setPower(dispensePow * leftTrigger);
+            rightIntake.setPower(-dispensePow * leftTrigger);
         } else { //otherwise, stop the motors
             leftIntake.setPower(0);
             rightIntake.setPower(0);
         }
-        prevRightBumper = rightTrigger > 0.1; //update global variables for the next iteration
+        //update global variables for the next iteration
+        prevRightBumper = rightTrigger > 0.05;
         prevHasStone = hasStone;
-    }
+    }*/
 
     public void updateStackingSystem(Gamepad gpad, double elapsedTime) {
         boolean a2 = gpad.a;
@@ -167,10 +193,11 @@ public class TeleControl extends RobotControl {
         } else if (tLeft > 0.05) { //if the left trigger is being pressed, set the power level
             pow = -tLeft;          //according to its negative position, weakened to account for the
         }                          //influence of gravity
+        //if back is pressed, zero the lift position and override the power adjustments
         if (back) {
             lift.setZero();
             lift.setPow(pow, false);
-        } else {
+        } else { //otherwise, apply the normal adjustments
             lift.setPow(pow, true);
         }
     }
@@ -214,7 +241,7 @@ public class TeleControl extends RobotControl {
         if (!a && prevA1) {
             hook.setPosition(hookPos[0]);
         } else if (!b && prevB1) {
-            hook.setPosition(hookPos[1]);
+            hook.setPosition(hookPos[2]);
         }
         prevA1 = a;
         prevB1 = b;
@@ -226,5 +253,13 @@ public class TeleControl extends RobotControl {
             autoStacker.createThread(AutoStacker.Task.PLACE_CAP);
         }
         prevBack = back;
+    }
+
+    public void updateFeederServo(Gamepad gpad) {
+        if (gpad.dpad_left) {
+            feederServo.setPosition(0);
+        } else if (gpad.dpad_right) {
+            feederServo.setPosition(0.29);
+        }
     }
 }
